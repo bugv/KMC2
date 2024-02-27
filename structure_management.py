@@ -33,6 +33,8 @@ def occupancy_vector_builder (file_name: str) -> np.array:
 #
 
 def atom_key_builder (structure: pmg.structure) -> dict:
+    list_values = list(range(len(structure.species)))
+    atom_key = dict(zip(structure.species, list_values))
     return atom_key
 
 
