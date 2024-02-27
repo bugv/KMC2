@@ -1,6 +1,15 @@
 ## This module contains all the functions that mangage the structure
 ## and keeping track of the atoms
 
+import numpy as np
+import pymatgen.core as pmg
+from pymatgen.core import Structure, Lattice
+
+## Read from file to structure
+# FUnction to read structure from file and produce a pymatgen structure
+#Input: a file location
+#Output: a pymatgen structure
+
 ## Create the occupancy vector
 # Input: poscar file with supercell
 # Output: Occupation vector of the structure with one vacancy in the structure (size=nb of sites in the structure)
@@ -22,7 +31,8 @@ def occupancy_vector_builder (file_name: str) -> np.array:
 #input: the structure
 #output: a key that associates each element in the structure with an integer eg: Vacancy->0, atom A->1, atom B->2 (as an array? dict?)
 #
-def atom_key_builder (structure: pymatgen.structure) -> dict:
+
+def atom_key_builder (structure: pmg.structure) -> dict:
     return atom_key
 
 
@@ -33,7 +43,7 @@ def atom_key_builder (structure: pymatgen.structure) -> dict:
 # 2. Convert result to array
 # 3. Return array
 
-def neighbour_finder (structure: pymatgen.structure) -> np.array:
+def neighbour_finder (structure: pmg.structure) -> np.array:
     return neighbour_array
 
 
@@ -43,7 +53,7 @@ def neighbour_finder (structure: pymatgen.structure) -> np.array:
 # 1. Use the get cartesian coordinates function from pymatgen to get the coordinates of each site and create array from them
 # 2. return the array 
 
-def temp_position_array_builder (structure: pymatgen.structure) -> np.array:
+def temp_position_array_builder (structure: pmg.structure) -> np.array:
     return temp_position_array
 
 ## Initialize R, the data collection array

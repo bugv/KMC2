@@ -53,14 +53,14 @@ def frquency_calculator (atom_key: dict)-> np.array:
     return frequency_vector
 
 
-##Initialize a temporary position array to store 
+##Initialize a  position array to store position at current time t
 #Input: pymatgen stucture
 #Output: array with size 3 x nb of sites (same structure as a single time slice of the R vector)
 # 1. Use the get cartesian coordinates function from pymatgen to get the coordinates of each site and create array from them
 # 2. return the array 
 
-def temp_position_array_builder (structure: pymatgen.structure) -> np.array:
-    return temp_position_array
+def position_array_builder (structure: pymatgen.structure) -> np.array:
+    return position_array
 
 
 ## Initialize R, the data collection array
