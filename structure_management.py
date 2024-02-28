@@ -11,19 +11,19 @@ from pymatgen.core import Structure, Lattice
 #Output: a pymatgen structure
 
 ## Create the occupancy vector
-# Input: poscar file with supercell
+# Input: structure
 # Output: Occupation vector of the structure with one vacancy in the structure (size=nb of sites in the structure)
 # 1. read structure from the supercell
-# 2. Check number of vacancies in the supercell
-#       a. 1 vacancy -> fine to continue
-#       b. 0 vacancies -> Replace random atom in supercell with a vacancy
-#       c. more than one vacancy -> Raise error? or replace all vacancies but one with atoms
 # 4. Get number of sites in the structure
 # 5. Create a vector with length number of sites in the structure
 # 6. Convert structure to occupancy vector by reading each item in the structure, and using key to get appropriate value to write to the vector
 # 7. Return occupancy vector
 
-def occupancy_vector_builder (file_name: str) -> np.array:
+def occupancy_vector_builder (structure: pmg.Structure, atom_key: dict) -> np.array:
+    N = structure.num_sites
+    occupancy_vector = np.empty(N)
+    for i in occupancy_vector:
+        occupancy_vector[i] = structure[i].species.elements
     return occupancy_vector
 
 
@@ -32,10 +32,14 @@ def occupancy_vector_builder (file_name: str) -> np.array:
 #output: a key that associates each element in the structure with an integer eg: Vacancy->0, atom A->1, atom B->2 (as an array? dict?)
 #
 
-def atom_key_builder (structure: pmg.structure) -> dict:
-    list_values = list(range(len(structure.species)))
-    atom_key = dict(zip(structure.species, list_values))
+def atom_key_builder (structure: pmg.Structure) -> dict:
+    list_values = list(range(len(structure.elements)))
+    element_list = structure.elements
+    for i in range(len(element_list)): #NOTE: not ideal to use range of len but I couldn't enumerate over elements in list to convert them to string
+        element_list[i] = str(element_list[i])
+    atom_key = dict(zip(element_list, list_values))
     return atom_key
+
 
 
 ##Creates a list of neighbours for each site
