@@ -20,11 +20,12 @@ from pymatgen.core import Structure, Lattice
 # 7. Return occupancy vector
 
 def occupancy_vector_builder (structure: pmg.Structure, atom_key: dict) -> np.array:
-    N = structure.num_sites
-    occupancy_vector = np.empty(N)
-    for i in occupancy_vector:
-        occupancy_vector[i] = structure[i].species.elements
+    N = structure.num_sites # get number of sites in structure
+    occupancy_vector = np.empty(N) #create empty occupancy vector of length  = nb of sites
+    for i in range(N): #can't enumerate over empty array
+        occupancy_vector[i] = atom_key[str(structure[i].species.elements[0])] #index 0 because strcuture[i].species.elements is a list with only one entry
     return occupancy_vector
+    
 
 
 ##Create key that links each type of atom in the structure to an integer
