@@ -8,6 +8,7 @@ import calculators
 #this function runs all of the initialization steps and some small tests
 #Input: structure
 #Output: 
+# Check number of vacancies
 
 
 ##Driver function

@@ -30,8 +30,8 @@ def occupancy_vector_builder (structure: pmg.Structure, atom_key: dict) -> np.ar
 
 ##Create key that links each type of atom in the structure to an integer
 #input: the structure
-#output: a key that associates each element in the structure with an integer eg: Vacancy->0, atom A->1, atom B->2 (as an array? dict?)
-#
+#output: a dict where the keys are the type of element and the values a corresponding integer eg: Vacancy->0, atom A->1, atom B->2 
+
 
 def atom_key_builder (structure: pmg.Structure) -> dict:
     list_values = list(range(len(structure.elements)))
@@ -40,6 +40,7 @@ def atom_key_builder (structure: pmg.Structure) -> dict:
         element_list[i] = str(element_list[i])
     atom_key = dict(zip(element_list, list_values))
     return atom_key
+# TODO check if possible to use species not element -> might be better to include vacancies
 
 
 
@@ -47,10 +48,31 @@ def atom_key_builder (structure: pmg.Structure) -> dict:
 #Input: pymatgen structure read from the file 
 #Output: Neighbour array(size = nb of sites x nb of neighbours per site(dependent on type of structure))
 # 1. Call pymatgen get_all_neighbours need cut of distance for neighbours
+# 2. Get number of neighbours per site to initialize array properly
 # 2. Convert result to array
 # 3. Return array
 
-def neighbour_finder (structure: pmg.structure) -> np.array:
+def neighbour_finder (structure: pmg.Structure) -> np.array:
+    N = structure.num_sites # Get number of sites N
+    neighbour_list = structure.get_neighbor_list(2.5) #NOTE cutoff value of 3 is arbitrary
+    centers_list = neighbour_list[0]
+    nearest_sites_list = neighbour_list[1]
+    print("nearest_sites_list", nearest_sites_list)
+    M = 8 #this is a temp value, should be the number of neighbours per site (use the first site to get this?)
+    neighbour_array = np.full((M, N), None)    
+    for index, atom in enumerate(centers_list):
+        added_to_list = False
+        for m in range(M):
+            if neighbour_array[m, atom] == None and not added_to_list  :
+                neighbour_array[m, atom] = nearest_sites_list[index]
+                # print(f"added{nearest_sites_list[index]} to the list of neigbours of site{atom}")
+                added_to_list = True
+            
+
+
+        # neighbour_array[0,centers_list[index]] = nearest_sites_list[index]
+    # Get number of neighbors per site M
+    # Create an array of size N
     return neighbour_array
 
 
