@@ -4,10 +4,8 @@
 #       - total number of steps to perform  (optional, default value otherwise)
 
 
+# call the initialization function
 
-#call the initialization function 
+# call driver function
 
-#call driver function
-
-#call processing functions
-
+# call processing functions
