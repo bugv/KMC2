@@ -52,27 +52,26 @@ def atom_key_builder (structure: pmg.Structure) -> dict:
 # 2. Convert result to array
 # 3. Return array
 
-def neighbour_finder (structure: pmg.Structure) -> np.array:
+def neighbour_finder (structure: pmg.Structure, radius: float) -> np.array:
     N = structure.num_sites # Get number of sites N
-    neighbour_list = structure.get_neighbor_list(2.5) #NOTE cutoff value of 3 is arbitrary
+    neighbour_list = structure.get_neighbor_list(radius) #NOTE cutoff value based on radius (but the value of radius is arbitrary, I used 2.5)
     centers_list = neighbour_list[0]
     nearest_sites_list = neighbour_list[1]
     print("nearest_sites_list", nearest_sites_list)
-    M = 8 #this is a temp value, should be the number of neighbours per site (use the first site to get this?)
+    #Get number of neighbours per site based on the number of neighbours of the first site
+    M = 0
+    for index, atom in enumerate(centers_list):
+        if centers_list[index] ==0:
+            M+=1
+    # Create neighbours array and fill it
     neighbour_array = np.full((M, N), None)    
     for index, atom in enumerate(centers_list):
         added_to_list = False
         for m in range(M):
-            if neighbour_array[m, atom] == None and not added_to_list  :
+            if neighbour_array[m, atom] == None and not added_to_list:
                 neighbour_array[m, atom] = nearest_sites_list[index]
                 # print(f"added{nearest_sites_list[index]} to the list of neigbours of site{atom}")
                 added_to_list = True
-            
-
-
-        # neighbour_array[0,centers_list[index]] = nearest_sites_list[index]
-    # Get number of neighbors per site M
-    # Create an array of size N
     return neighbour_array
 
 
