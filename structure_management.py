@@ -27,6 +27,15 @@ import pymatgen.core as pmg
 
 
 def occupancy_vector_builder(structure: pmg.Structure, atom_key: dict) -> np.array:
+    """Creates the occupancy vector where each index corresponds to a site in the structure and the value corresponds to the type of atom present
+
+    :param structure: supercell
+    :type structure: pmg.Structure
+    :param atom_key: key linking type of atom to an int (use atom_key_builder)
+    :type atom_key: dict
+    :return: vector where values correspond to atom at the site with that index
+    :rtype: np.array
+    """
     occupancy_vector = np.empty(
         structure.num_sites
     )  # create empty occupancy vector of length  = nb of sites
@@ -37,12 +46,14 @@ def occupancy_vector_builder(structure: pmg.Structure, atom_key: dict) -> np.arr
     return occupancy_vector
 
 
-##Create key that links each type of atom in the structure to an integer
-# input: the structure
-# output: a dict where the keys are the type of element and the values a corresponding integer eg: Vacancy->0, atom A->1, atom B->2
-
-
 def atom_key_builder(structure: pmg.Structure) -> dict:
+    """Create a dict to link atom type to an integer
+
+    :param structure: supercell
+    :type structure: pmg.Structure
+    :return: dict, with types of atoms as key and unique ints as values
+    :rtype: dict
+    """
     list_values = list(range(len(structure.elements)))
     element_list = structure.elements
     for i in range(
@@ -53,19 +64,16 @@ def atom_key_builder(structure: pmg.Structure) -> dict:
     return atom_key
 
 
-# TODO check if possible to use species not element -> might be better to include vacancies
-
-
-##Creates a list of neighbours for each site
-# Input: pymatgen structure read from the file
-# Output: Neighbour array(size = nb of sites x nb of neighbours per site(dependent on type of structure))
-# 1. Call pymatgen get_all_neighbours need cut of distance for neighbours
-# 2. Get number of neighbours per site to initialize array properly
-# 2. Convert result to array
-# 3. Return array
-
-
 def neighbour_finder(structure: pmg.Structure, radius: float) -> np.array:
+    """A function to find the neighbouring sites for each site
+
+    :param structure: A supercell
+    :type structure: pmg.Structure
+    :param radius: THe cutoff radius for a neighbour
+    :type radius: float
+    :return: An array where the values in a given column contains the labels for the neighbouring sites
+    :rtype: np.array
+    """
     N = structure.num_sites  # Get number of sites N
     neighbour_list = structure.get_neighbor_list(
         radius
@@ -95,34 +103,42 @@ def neighbour_finder_v2(structure: pmg.Structure, radius: float) -> np.array:
     nearest_sites_list = neighbour_list[1]
     unique, counts = np.unique(centers_list, return_counts=True)
     m = counts.max()
-    # Create neighbours array and fill it
-    neighbour_array = np.full((m, structure.num_sites), None)
-    # indices_array =
-    # print(indices_array)
+    neighbour_array = np.full((m, structure.num_sites), None)  # create neighbour array
+    position_array = np.tile(np.arange(m), (structure.num_sites, 1)).T
+    position_array[:, :] = np.where(
+        np.arange(m) < counts[:, None], np.arange(m), None
+    ).T
+    # position_array = np.full((m, structure.num_sites), None)
+    # position_array[:, :] = np.arange(0, m)
+    print(position_array)
     return neighbour_array
 
 
-##Initialize a temporary position array to store
-# Input: pymatgen stucture
-# Output: array with size 3 x nb of sites (same structure as a single time slice of the R vector)
-# 1. Use the get cartesian coordinates function from pymatgen to get the coordinates of each site and create array from them
-# 2. return the array
-
-
 def current_position_array_builder(structure: pmg.Structure) -> np.array:
+    """Create an array to store the position of the atoms at the current time
+
+    :param structure: supercell
+    :type structure: pmg.Structure
+    :return: An array with the coordinates of the atoms at the initial time
+    :rtype: np.array
+    """
     return structure.cart_coords.transpose()
-
-
-## Initialize R, the data collection array
-# Input: temorary position array,  number of times sampled/ sampling frequency? (include default value for case when it is not specified),
-# Output:  array R (size: 3 x nb of sites x nb of  times sampled), contains initial positions of atoms, rest is empty
-# 1. create array of size 3 x nb of sites x nb of times sampled
-# 2. fill first time step layer with content of the temporary position array
 
 
 def data_collector_builder(
     structure: pmg.Structure, sampling_freq: float, total_number_step: int
 ) -> np.array:
+    """Create an array in which to store the position of the atoms at the sampling times
+
+    :param structure: supercell
+    :type structure: pmg.Structure
+    :param sampling_freq: Frequency (nb of steps) at which the position of the atoms should be sampled
+    :type sampling_freq: float
+    :param total_number_step: Number of steps
+    :type total_number_step: int
+    :return: 3D array to store the results at each sampling step
+    :rtype: np.array
+    """
     data_collector = np.full(
         (3, structure.num_sites, int(total_number_step / sampling_freq)), None
     )
@@ -130,20 +146,12 @@ def data_collector_builder(
     return data_collector
 
 
-## Update temporary position array
-# Input: event, temporary position array, list of neighbours, (position of vacancy ??)
-# Output:  temporary position array
+def initialize_index_vector(structure: pmg.Structure) -> np.arry:
+    """Initialize an index vector which links the occupancy vector(species at each site) and the current position of the atoms based on their starting site
 
-
-## Update structure (occupancy vector, temp position array and index vector)
-# Input:
-# Output:
-
-
-## Initialize index vector (links the occupancy vector and the temp position array)
-# Input:
-# Output:
-
-
-def initialize_index_vector():
-    return index_vector
+    :param structure: supercell
+    :type structure: pmg.Structure
+    :return: 1D array with position of atoms at the initial situation
+    :rtype: np.array
+    """
+    return np.arange(structure.num_sites)

@@ -1,11 +1,23 @@
-##Frequency Calculator
-# Input: Key that relates the different types of atoms to ints
-# Output: Vector with frequencies for each element in the structure (size: nb of different elements in the structure)
-# 1. Create vector with length equal to number of elements in the structure
-# 2. return vector
+"""This module contains the functions related to frequency calculations
+
+It contains functions to initially attribute a frequency to hops with different types of atoms 
+and to calculate the frequency of given events
+
+Available functions:
+- frequency_calculator"""
+
+import numpy as np
 
 
 def frquency_calculator(atom_key: dict) -> np.array:
+    """Function that creats a dict that associates the frequency of a hop between a vacancy and an atom of each type
+
+    :param atom_key: key relating each type of atom to a unique int (use atom_key_builder to create it)
+    :type atom_key: dict
+    :return: array where the value corresponds to the frequency of a hop for the atom with that index as identification
+    :rtype: np.array
+    """
+    frequency_vector = np.full(len(atom_key), 1 / len(atom_key))
     return frequency_vector
 
 
@@ -27,3 +39,13 @@ def frquency_calculator(atom_key: dict) -> np.array:
 # Output: event (number of the neighbour which is swapped?)
 # 1. loop check if random number is greater than nth value in vector if no return n if yes check n+1th value...
 # 2. return n (check if this makes sense)
+
+
+def random_number() -> int:
+    """Random number generator
+
+    :return: Random number between 0 and 1
+    :rtype: int
+    """
+    rng = np.random.default_rng()
+    return rng.random()
