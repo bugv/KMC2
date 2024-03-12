@@ -16,15 +16,6 @@ import pymatgen.core as pmg
 # Input: a file location
 # Output: a pymatgen structure
 
-## Create the occupancy vector
-# Input: structure
-# Output: Occupation vector of the structure with one vacancy in the structure (size=nb of sites in the structure)
-# 1. read structure from the supercell
-# 4. Get number of sites in the structure
-# 5. Create a vector with length number of sites in the structure
-# 6. Convert structure to occupancy vector by reading each item in the structure, and using key to get appropriate value to write to the vector
-# 7. Return occupancy vector
-
 
 def occupancy_vector_builder(structure: pmg.Structure, atom_key: dict) -> np.array:
     """Creates the occupancy vector where each index corresponds to a site in the structure and the value corresponds to the type of atom present
@@ -36,9 +27,7 @@ def occupancy_vector_builder(structure: pmg.Structure, atom_key: dict) -> np.arr
     :return: vector where values correspond to atom at the site with that index
     :rtype: np.array
     """
-    occupancy_vector = np.empty(
-        structure.num_sites
-    )  # create empty occupancy vector of length  = nb of sites
+    occupancy_vector = np.empty(structure.num_sites)
     for i in range(structure.num_sites):  # can't enumerate over empty array
         occupancy_vector[i] = atom_key[
             str(structure[i].species.elements[0])
@@ -74,25 +63,21 @@ def neighbour_finder(structure: pmg.Structure, radius: float) -> np.array:
     :return: An array where the values in a given column contains the labels for the neighbouring sites
     :rtype: np.array
     """
-    N = structure.num_sites  # Get number of sites N
-    neighbour_list = structure.get_neighbor_list(
-        radius
-    )  # NOTE cutoff value based on radius (but the value of radius is arbitrary, I used 2.5)
+    N = structure.num_sites
+    neighbour_list = structure.get_neighbor_list(radius)
     centers_list = neighbour_list[0]
     nearest_sites_list = neighbour_list[1]
-    # Get number of neighbours per site based on the number of neighbours of the first site
+
     M = 0
     for index, atom in enumerate(centers_list):
         if centers_list[index] == 0:
             M += 1
-    # Create neighbours array and fill it
     neighbour_array = np.full((M, N), None)
     for index, atom in enumerate(centers_list):
         added_to_list = False
         for m in range(M):
             if neighbour_array[m, atom] == None and not added_to_list:
                 neighbour_array[m, atom] = nearest_sites_list[index]
-                # print(f"added{nearest_sites_list[index]} to the list of neigbours of site{atom}")
                 added_to_list = True
     return neighbour_array
 
@@ -146,7 +131,7 @@ def data_collector_builder(
     return data_collector
 
 
-def initialize_index_vector(structure: pmg.Structure) -> np.arry:
+def index_vector_builder(structure: pmg.Structure) -> np.array:
     """Initialize an index vector which links the occupancy vector(species at each site) and the current position of the atoms based on their starting site
 
     :param structure: supercell
@@ -155,3 +140,18 @@ def initialize_index_vector(structure: pmg.Structure) -> np.arry:
     :rtype: np.array
     """
     return np.arange(structure.num_sites)
+
+
+def find_vac(occupancy_vector: np.array, atom_key: dict) -> int:
+    """Funtion to find the position of the vacancy in the occupancy vector
+
+    :param occupancy_vector: occupancy vector
+    :type occupancy_vector: np.array
+    :param atom_key: atom key
+    :type atom_key: dict
+    :return: integer correponding to the index of the vacancy within the occupancy vector
+    :rtype: int
+    """
+    for i in np.nditer(occupancy_vector):
+        if int(i) == atom_key["X0+"]:
+            return i
