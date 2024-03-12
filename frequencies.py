@@ -21,6 +21,22 @@ def frquency_calculator(atom_key: dict) -> np.array:
     return frequency_vector
 
 
+def standardize_frequencies(user_frequencies: dict, atom_key: dict) -> np.array:
+    """Function that takes the frequencies per atom inputed by the user and converts them to a freqeuency array
+
+    :param user_frequencies: dict containing as keys the species and as values their frequency
+    :type user_frequencies: dict
+    :param atom_key: The atom key dict that relates the species in the structure with a unique int, generated with atom_key_builder
+    :type atom_key: dict
+    :return: 1D array with the frequency of a given atom at the index that corresponds to that atom in the array
+    :rtype: np.array
+    """
+    frequency_vector = np.full(len(atom_key), None)
+    for key in atom_key:
+        frequency_vector[atom_key[key]] = user_frequencies[key]
+    return frequency_vector
+
+
 ## Hop frequency calculator function
 # Input: occupancy vector, list of neighbours
 # Output: vector with the event frequencies  (same order as the order of the neighbours in the list)
@@ -32,6 +48,10 @@ def frquency_calculator(atom_key: dict) -> np.array:
 # 6. divide frequency vector by sum
 # 7. add previous value in vector to the value in vector (get end of interval in the sketch)
 # 8. Return vector and sum
+
+
+# def hop_frequency_calculator(occupancy_vector: np.array, neighbour_list:np.array)-> tuple:
+# return
 
 
 ## Choose event function
