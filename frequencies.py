@@ -7,6 +7,7 @@ Available functions:
 - frequency_calculator"""
 
 import numpy as np
+import structure_management
 
 
 def frquency_calculator(atom_key: dict) -> np.array:
@@ -24,7 +25,7 @@ def frquency_calculator(atom_key: dict) -> np.array:
 def standardize_frequencies(user_frequencies: dict, atom_key: dict) -> np.array:
     """Function that takes the frequencies per atom inputed by the user and converts them to a freqeuency array
 
-    :param user_frequencies: dict containing as keys the species and as values their frequency
+    :param user_frequencies: dict containing as keys the species and as values their frequency, the vacancy should be included as {"V0+":0}
     :type user_frequencies: dict
     :param atom_key: The atom key dict that relates the species in the structure with a unique int, generated with atom_key_builder
     :type atom_key: dict
@@ -42,16 +43,30 @@ def standardize_frequencies(user_frequencies: dict, atom_key: dict) -> np.array:
 # Output: vector with the event frequencies  (same order as the order of the neighbours in the list)
 # 1. Find position of vacancy in the occupancy vector
 # 2. get corresponding neighbours from the list of neighbours
-# 3. create vector of size number of neighbours to stop the frequencies
+# 3. create vector of size number of neighbours to store the frequencies
 # 4. For each neighbour in the list check with key the type of atom, then get frequency from list of frequencies as a function of atom type and put it into the vector
 # 5. Calculate sum of all values in the frequency vector
 # 6. divide frequency vector by sum
 # 7. add previous value in vector to the value in vector (get end of interval in the sketch)
 # 8. Return vector and sum
 
+# NOTE The vacancy is the dummy species X, which is described as "X0+" in the structure
 
-# def hop_frequency_calculator(occupancy_vector: np.array, neighbour_list:np.array)-> tuple:
-# return
+
+def hop_frequency_calculator(
+    occupancy_vector: np.array,
+    neighbour_list: np.array,
+    frequency_vect: np.array,
+    atom_key: dict,
+) -> tuple:
+    position_vac = structure_management.find_vac(occupancy_vector, atom_key)
+    neighbours = neighbour_list[:, position_vac]
+    freq_neighbours = np.full(len(neighbour_list), None)
+    for count, values in enumerate(neighbours):
+        freq_neighbours[count] = frequency_vect[int(occupancy_vector[int(values)])]
+    sum_frequencies = np.sum(freq_neighbours)
+    freq_neighbours = sum_frequencies * freq_neighbours
+    return freq_neighbours, sum_frequencies
 
 
 ## Choose event function
