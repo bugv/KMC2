@@ -59,13 +59,26 @@ def hop_frequency_calculator(
     frequency_vect: np.array,
     atom_key: dict,
 ) -> tuple:
+    """Function that calculates the frequency for the possible hops with the current position of the atoms
+
+    :param occupancy_vector: occupancy vector
+    :type occupancy_vector: np.array
+    :param neighbour_list: list of neighbours
+    :type neighbour_list: np.array
+    :param frequency_vect: frequency of hops depending on atom type
+    :type frequency_vect: np.array
+    :param atom_key: atom key
+    :type atom_key: dict
+    :return: frequency of the hops for the atoms that are neighbouring the vacancy and the sum of the frequencies
+    :rtype: tuple
+    """
     position_vac = structure_management.find_vac(occupancy_vector, atom_key)
     neighbours = neighbour_list[:, position_vac]
     freq_neighbours = np.full(len(neighbour_list), None)
     for count, values in enumerate(neighbours):
         freq_neighbours[count] = frequency_vect[int(occupancy_vector[int(values)])]
     sum_frequencies = np.sum(freq_neighbours)
-    freq_neighbours = sum_frequencies * freq_neighbours
+    freq_neighbours = (np.cumsum(freq_neighbours)) / sum_frequencies
     return freq_neighbours, sum_frequencies
 
 
@@ -75,12 +88,27 @@ def hop_frequency_calculator(
 # 1. loop check if random number is greater than nth value in vector if no return n if yes check n+1th value...
 # 2. return n (check if this makes sense)
 
+# Use cumulative sum and np.where
 
-def random_number() -> int:
+
+def select_event(freq_neighbours: np.array) -> int:
+    """Function to select an event from the frequency vector,
+       returns the index of the neighbour with which the vacancy will switch
+
+    :param freq_neighbours: 1D array with cumulative frequencies which range from 0 to 1
+    :type freq_neighbours: np.array
+    :return: an int corresponding to the column index of the neighbour the vacancy will switch with
+    :rtype: int
+    """
+    rho = random_number()
+    return np.min(np.where(freq_neighbours > rho))
+
+
+def random_number() -> float:
     """Random number generator
 
     :return: Random number between 0 and 1
-    :rtype: int
+    :rtype: float
     """
     rng = np.random.default_rng()
     return rng.random()
