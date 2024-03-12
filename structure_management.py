@@ -10,6 +10,7 @@ Available functions:
 
 import numpy as np
 import pymatgen.core as pmg
+from dataclasses import dataclass
 
 ## Read from file to structure
 # FUnction to read structure from file and produce a pymatgen structure
@@ -117,7 +118,7 @@ def data_collector_builder(
 
     :param structure: supercell
     :type structure: pmg.Structure
-    :param sampling_freq: Frequency (nb of steps) at which the position of the atoms should be sampled
+    :param sampling_freq: Frequency (nb steps) for sampling atom position
     :type sampling_freq: float
     :param total_number_step: Number of steps
     :type total_number_step: int
@@ -132,7 +133,8 @@ def data_collector_builder(
 
 
 def index_vector_builder(structure: pmg.Structure) -> np.array:
-    """Initialize an index vector which links the occupancy vector(species at each site) and the current position of the atoms based on their starting site
+    """Initialize an index vector which links the occupancy vector(species at each site)
+       and the current position of the atoms based on their starting site
 
     :param structure: supercell
     :type structure: pmg.Structure
@@ -152,6 +154,34 @@ def find_vac(occupancy_vector: np.array, atom_key: dict) -> int:
     :return: integer correponding to the index of the vacancy within the occupancy vector
     :rtype: int
     """
-    for i in np.nditer(occupancy_vector):
+    it = np.nditer(occupancy_vector, flags=["f_index"])
+    for i in it:
         if int(i) == atom_key["X0+"]:
-            return i
+            return it.index
+
+
+@dataclass
+class AtomPositions:
+    """Class to manage all the arrays that describe the position of the atoms
+    Consists of occupancy_vector, current_position_array, index_array
+    """
+
+    occupancy_vector: np.array
+    current_position_array: np.array
+    index_array: np.array
+
+    def swap(self, a: int, b: int):
+        """Method to swap the species in sites a and b of the structure
+
+        :param index_a: index of the first species
+        :type index_a: int
+        :param index_b: index of the second species
+        :type index_b: int
+        """
+        temp_a = self.occupancy_vector[a]
+        self.occupancy_vector[a] = self.occupancy_vector[b]
+        self.occupancy_vector[b] = temp_a
+        temp_a = self.index_array[a]
+        self.index_array[a] = self.index_array[b]
+        self.index_array[b] = temp_a
+        self.current_position_array[:, [a, b]] = self.current_position_array[:, [b, a]]
