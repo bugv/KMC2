@@ -9,10 +9,13 @@ Available functions:
 import structure_management
 import frequencies
 import calculators
+import numpy as np
+from structure_management import AtomPositions
 
 
 def intialization(
     structure,
+    user_frequencies: dict,
     radius: float,
     sampling_frequency: float,
     total_nb_steps: int,
@@ -21,44 +24,90 @@ def intialization(
 
     :param structure: supercell
     :type structure: _type_
+    :param user_frequencies: dict, where the keys are the species in the structure and the values the associated frequency
+    :type user_frequencies: dict
     :param radius: Cutoff radius for nearest neighbour
     :type radius: float
     :param sampling_frequency: Frequency (nb of steps) at which the position of the atoms should be sampled
     :type sampling_frequency: float
     :param total_nb_steps: total number of steps to perform
     :type total_nb_steps: int
-    :return: Tuple containing the occupancy vector, the neighbour vector, the frequency vector,
-    the current position array, the data collector array, the current time(0), and the number of steps performed(0)
+    :return: Tuple containing in order the occupancy vector, the neighbour vector,
+    the atom key, the frequency vector, the index_array,
+    the current position array, the data collector array,
+    the total number of steps, the sampling frequency and
+    the current position of the vacancy
     :rtype: tuple
     """
     atom_key = structure_management.atom_key_builder(structure)
     occupancy_vector = structure_management.occupancy_vector_builder(
         structure, atom_key
     )
-    neighour_vector = structure_management.neighbour_finder(structure, radius)
-    frequency_vector = frequencies.frquency_calculator(atom_key)
+    neighour_array = structure_management.neighbour_finder(structure, radius)
+    frequency_vector = frequencies.standardize_frequencies(user_frequencies, atom_key)
     current_position_array = structure_management.current_position_array_builder(
         structure
     )
     data_collector = structure_management.data_collector_builder(
         structure, sampling_frequency, total_nb_steps
     )
-    t = 0
-    nb_steps = 0
+    index_array = structure_management.index_vector_builder(structure)
+    time = 0
+    vac_position = structure_management.find_vac(occupancy_vector, atom_key)
     return (
         occupancy_vector,
-        neighour_vector,
+        atom_key,
+        neighour_array,
         frequency_vector,
+        index_array,
         current_position_array,
         data_collector,
-        t,
-        nb_steps,
+        total_nb_steps,
+        sampling_frequency,
+        vac_position,
     )
 
 
 ##Driver function
 # This function implements the loop in the algorithm, it takes as input functions corresponding to different steps
+# Input:  tuple from the initialize function, hop_frequency_calculator function, random_number_generator function, acceptor function
+# Output:
+def driver(
+    initialized_values: tuple,
+) -> np.array:
+    """Function that executes the main loop of the KMC
+
+    :param initialized_values: _description_
+    :type initialized_values: tuple
+    :return: _description_
+    :rtype: np.array
+    """
+    # Initialize time, get position of vacancy
+    vac_position = initialized_values[9]
+    t = 0
+    R = initialized_values[6]
+    atom_pos = AtomPositions(
+        initialized_values[0], initialized_values[5], initialized_values[4]
+    )
+    for nb_steps in range(0, initialized_values[7]):
+        freq_neighbours, sum = frequencies.hop_frequency_calculator(
+            vac_position,
+            atom_pos.occupancy_vector,
+            initialized_values[2],
+            initialized_values[3],
+            initialized_values[1],
+        )
+        event = frequencies.select_event(freq_neighbours)
+        event = initialized_values[2][event, vac_position]
+        t = t + frequencies.time_step_calculator(sum)
+        atom_pos.swap(vac_position, event)
+        vac_position = event
+        # Check sampling
+        if nb_steps % initialized_values[8] == 0:
+            R[:, :, int(nb_steps / initialized_values[8])] = (
+                atom_pos.current_position_array
+            )
+    return R
 
 
 ##Result analysis function
-# Thic function

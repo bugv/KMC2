@@ -38,29 +38,21 @@ def standardize_frequencies(user_frequencies: dict, atom_key: dict) -> np.array:
     return frequency_vector
 
 
-## Hop frequency calculator function
-# Input: occupancy vector, list of neighbours
-# Output: vector with the event frequencies  (same order as the order of the neighbours in the list)
-# 1. Find position of vacancy in the occupancy vector
-# 2. get corresponding neighbours from the list of neighbours
-# 3. create vector of size number of neighbours to store the frequencies
-# 4. For each neighbour in the list check with key the type of atom, then get frequency from list of frequencies as a function of atom type and put it into the vector
-# 5. Calculate sum of all values in the frequency vector
-# 6. divide frequency vector by sum
-# 7. add previous value in vector to the value in vector (get end of interval in the sketch)
-# 8. Return vector and sum
-
 # NOTE The vacancy is the dummy species X, which is described as "X0+" in the structure
 
 
 def hop_frequency_calculator(
+    vacancy_position: int,
     occupancy_vector: np.array,
     neighbour_list: np.array,
     frequency_vect: np.array,
     atom_key: dict,
 ) -> tuple:
-    """Function that calculates the frequency for the possible hops with the current position of the atoms
+    """Function that calculates the frequency for the possible
+       hops with the current position of the atoms
 
+    :param vacancy_position: index indicating position of the vacancy in the structure
+    :type vacancy_position: int
     :param occupancy_vector: occupancy vector
     :type occupancy_vector: np.array
     :param neighbour_list: list of neighbours
@@ -69,26 +61,17 @@ def hop_frequency_calculator(
     :type frequency_vect: np.array
     :param atom_key: atom key
     :type atom_key: dict
-    :return: frequency of the hops for the atoms that are neighbouring the vacancy and the sum of the frequencies
+    :return: frequency of the hops for the atoms that are neighbouring the vacancy
+             and the sum of the frequencies
     :rtype: tuple
     """
-    position_vac = structure_management.find_vac(occupancy_vector, atom_key)
-    neighbours = neighbour_list[:, position_vac]
+    neighbours = neighbour_list[:, vacancy_position]
     freq_neighbours = np.full(len(neighbour_list), None)
     for count, values in enumerate(neighbours):
         freq_neighbours[count] = frequency_vect[int(occupancy_vector[int(values)])]
     sum_frequencies = np.sum(freq_neighbours)
     freq_neighbours = (np.cumsum(freq_neighbours)) / sum_frequencies
     return freq_neighbours, sum_frequencies
-
-
-## Choose event function
-# Input: random number rho, event frequency vector
-# Output: event (number of the neighbour which is swapped?)
-# 1. loop check if random number is greater than nth value in vector if no return n if yes check n+1th value...
-# 2. return n (check if this makes sense)
-
-# Use cumulative sum and np.where
 
 
 def select_event(freq_neighbours: np.array) -> int:
@@ -112,3 +95,14 @@ def random_number() -> float:
     """
     rng = np.random.default_rng()
     return rng.random()
+
+
+def time_step_calculator(frequency_sum: float) -> float:
+    """Function to calculate the time step
+
+    :param frequency_sum: The sum of the freqeuency of all possible events
+    :type frequency_sum: float
+    :return: The time step for that event
+    :rtype: float
+    """
+    return (-1) / (frequency_sum) * np.log(random_number())
