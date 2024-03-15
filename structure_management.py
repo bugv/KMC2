@@ -154,10 +154,8 @@ def find_vac(occupancy_vector: np.array, atom_key: dict) -> int:
     :return: integer correponding to the index of the vacancy within the occupancy vector
     :rtype: int
     """
-    it = np.nditer(occupancy_vector, flags=["f_index"])
-    for i in it:
-        if int(i) == atom_key["X0+"]:
-            return it.index
+    vac_pos = np.where(occupancy_vector == atom_key["X0+"])
+    return int(vac_pos[0])
 
 
 @dataclass

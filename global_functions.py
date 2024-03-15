@@ -72,7 +72,7 @@ def intialization(
 # Output:
 
 
-def driver_v2(
+def driver(
     initialized_values: tuple,
 ) -> np.array:
     """Function that executes the main loop of the KMC
