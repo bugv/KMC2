@@ -52,19 +52,17 @@ def intialization(
         structure, sampling_frequency, total_nb_steps
     )
     index_array = structure_management.index_vector_builder(structure)
-    time = 0
     vac_position = structure_management.find_vac(occupancy_vector, atom_key)
+    atom_pos = AtomPositions(occupancy_vector, current_position_array, index_array)
     return (
-        occupancy_vector,
-        atom_key,
-        neighour_array,
-        frequency_vector,
-        index_array,
-        current_position_array,
-        data_collector,
-        total_nb_steps,
-        sampling_frequency,
-        vac_position,
+        atom_pos,  # 0
+        atom_key,  # 1
+        neighour_array,  # 2
+        frequency_vector,  # 3
+        data_collector,  # 4
+        total_nb_steps,  # 5
+        sampling_frequency,  # 6
+        vac_position,  # 7
     )
 
 
@@ -72,25 +70,24 @@ def intialization(
 # This function implements the loop in the algorithm, it takes as input functions corresponding to different steps
 # Input:  tuple from the initialize function, hop_frequency_calculator function, random_number_generator function, acceptor function
 # Output:
-def driver(
+
+
+def driver_v2(
     initialized_values: tuple,
 ) -> np.array:
     """Function that executes the main loop of the KMC
 
-    :param initialized_values: _description_
+    :param initialized_values: Tuple returned by the initialization function
     :type initialized_values: tuple
-    :return: _description_
+    :return: data collector array
     :rtype: np.array
     """
-    # Initialize time, get position of vacancy
-    vac_position = initialized_values[9]
+    vac_position = initialized_values[7]
     t = 0
-    R = initialized_values[6]
-    atom_pos = AtomPositions(
-        initialized_values[0], initialized_values[5], initialized_values[4]
-    )
-    for nb_steps in range(0, initialized_values[7]):
-        freq_neighbours, sum = frequencies.hop_frequency_calculator(
+    r = initialized_values[4]
+    atom_pos = initialized_values[0]
+    for nb_steps in range(0, initialized_values[5]):
+        freq_neighbours, sum_freq = frequencies.hop_frequency_calculator(
             vac_position,
             atom_pos.occupancy_vector,
             initialized_values[2],
@@ -99,15 +96,11 @@ def driver(
         )
         event = frequencies.select_event(freq_neighbours)
         event = initialized_values[2][event, vac_position]
-        t = t + frequencies.time_step_calculator(sum)
+        t = t + frequencies.time_step_calculator(sum_freq)
         atom_pos.swap(vac_position, event)
         vac_position = event
-        # Check sampling
-        if nb_steps % initialized_values[8] == 0:
-            R[:, :, int(nb_steps / initialized_values[8])] = (
+        if nb_steps % initialized_values[6] == 0:
+            r[:, :, int(nb_steps / initialized_values[6])] = (
                 atom_pos.current_position_array
             )
-    return R
-
-
-##Result analysis function
+    return r
