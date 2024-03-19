@@ -132,6 +132,19 @@ def data_collector_builder(
     return data_collector
 
 
+def time_collector_builder(sampling_freq: float, total_number_step: int) -> np.array:
+    """Function to create an array to store the times for sampling
+
+    :param sampling_freq: frequency at which to take samples (nb of steps)
+    :type sampling_freq: float
+    :param total_number_step: Total number of iterations of the KMC
+    :type total_number_step: int
+    :return: array to store the times at which the structure is sampled
+    :rtype: np.array
+    """
+    return np.full((1, int(total_number_step / sampling_freq)), 0.0)
+
+
 def index_vector_builder(structure: pmg.Structure) -> np.array:
     """Initialize an index vector which links the occupancy vector(species at each site)
        and the current position of the atoms based on their starting site
@@ -168,7 +181,7 @@ class AtomPositions:
     current_position_array: np.array
     index_array: np.array
 
-    def swap(self, a: int, b: int):
+    def swap(self, i: int, j: int):
         """Method to swap the species in sites a and b of the structure
 
         :param index_a: index of the first species
@@ -176,10 +189,20 @@ class AtomPositions:
         :param index_b: index of the second species
         :type index_b: int
         """
-        temp_a = self.occupancy_vector[a]
-        self.occupancy_vector[a] = self.occupancy_vector[b]
-        self.occupancy_vector[b] = temp_a
-        temp_a = self.index_array[a]
-        self.index_array[a] = self.index_array[b]
-        self.index_array[b] = temp_a
-        self.current_position_array[:, [a, b]] = self.current_position_array[:, [b, a]]
+        # update occupancy vector
+        temp_i = self.occupancy_vector[i]
+        self.occupancy_vector[i] = self.occupancy_vector[j]
+        self.occupancy_vector[j] = temp_i
+
+        # update current_position_array
+        # self.current_position_array[:, [a, b]] = self.current_position_array[:, [b, a]]
+        a = np.where(self.index_array == i)
+        b = np.where(self.index_array == j)
+        temp_a = np.copy(self.current_position_array[:, a])
+        self.current_position_array[:, a] = self.current_position_array[:, b]
+        self.current_position_array[:, b] = temp_a
+
+        # update index array
+        temp_i = self.index_array[i]
+        self.index_array[i] = self.index_array[j]
+        self.index_array[j] = temp_i

@@ -54,7 +54,7 @@ def intialization(
     index_array = structure_management.index_vector_builder(structure)
     vac_position = structure_management.find_vac(occupancy_vector, atom_key)
     atom_pos = AtomPositions(occupancy_vector, current_position_array, index_array)
-    time_collecor = structure_management.time_collector_builder(
+    time_collector = structure_management.time_collector_builder(
         sampling_frequency, total_nb_steps
     )
     return {
@@ -66,7 +66,8 @@ def intialization(
         "total_nb_steps": total_nb_steps,
         "sampling_frequency": sampling_frequency,
         "vac_position": vac_position,
-        "time_collector": time_collecor,
+        "time_collector": time_collector,
+        "time": 0,
     }
     # return (
     #     atom_pos,  # 0
@@ -97,7 +98,6 @@ def driver(
     :rtype: np.array
     """
     vac_position = initialized_values["vac_position"]
-    time = 0
     data_collector = initialized_values["data_collector"]
     atom_pos = initialized_values["atom_pos"]
     for nb_steps in range(0, initialized_values["total_nb_steps"]):
@@ -110,11 +110,13 @@ def driver(
         )
         event = frequencies.select_event(freq_neighbours)
         event = initialized_values["neighbour_array"][event, vac_position]
-        time = time + frequencies.time_step_calculator(sum_freq)
+        initialized_values["time"] = initialized_values[
+            "time"
+        ] + frequencies.time_step_calculator(sum_freq)
         atom_pos.swap(vac_position, event)
         vac_position = event
         if nb_steps % initialized_values["sampling_frequency"] == 0:
             data_collector[
                 :, :, int(nb_steps / initialized_values["sampling_frequency"])
             ] = atom_pos.current_position_array
-    return data_collector
+    return data_collector, initialized_values["time"]
