@@ -11,6 +11,7 @@ Available functions:
 import numpy as np
 import pymatgen.core as pmg
 from dataclasses import dataclass
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 ## Read from file to structure
 # FUnction to read structure from file and produce a pymatgen structure
@@ -52,6 +53,37 @@ def atom_key_builder(structure: pmg.Structure) -> dict:
         element_list[i] = str(element_list[i])
     atom_key = dict(zip(element_list, list_values))
     return atom_key
+
+
+def get_equiv_primative(supercell: pmg.Structure) -> np.array:
+    """Create an array which indicates which site in the primitive cell,
+       the site in the supercell is equivalent to
+
+    :param supercell: supercell
+    :type supercell: pmg.Structure
+    :raises TypeError: check that a site is not equivlent to two sites in the primitive cell
+    :raises TypeError: check that all sites in the supercell are equivalent to a site in the primitive cell
+    :return: array where at each index there is the equivalent site in the primitive cell
+    :rtype: np.array
+    """
+    for site in supercell:
+        site.species = pmg.DummySpecies("X")
+    primitivecell = SpacegroupAnalyzer(supercell).find_primitive()
+    lattice_matrix_inv = np.linalg.inv(np.transpose(primitivecell.lattice.matrix))
+    equivalent_sites_array = np.full(supercell.num_sites, None)
+    for i in range(supercell.num_sites):
+        for j in range(primitivecell.num_sites):
+            result = lattice_matrix_inv @ (
+                supercell.cart_coords[i, :] - primitivecell.cart_coords[j, :]
+            )
+            is_equiv = np.all(np.isclose(result, np.round(result), atol=1e-5))
+            if is_equiv and equivalent_sites_array[i] is not None:
+                raise TypeError("site is equivalent to two sites in the primitive cell")
+            if equivalent_sites_array[i] is None and is_equiv:
+                equivalent_sites_array[i] = j
+    if np.any(equivalent_sites_array, None) is 0.0:
+        raise TypeError("one or more sites has no equivalent in the primitive cell")
+    return equivalent_sites_array
 
 
 def neighbour_finder(structure: pmg.Structure, radius: float) -> np.array:
@@ -171,6 +203,29 @@ def find_vac(occupancy_vector: np.array, atom_key: dict) -> int:
     return int(vac_pos[0])
 
 
+def frac_coord_array_builder(structure: pmg.Structure) -> np.array:
+    """Function to get fractional coordinates of each site in structure
+
+    :param structure: supercell
+    :type structure: pmg.Structure
+    :return: 3 x nb_sites array with fractional coordinates for each site,
+    :rtype: np.array
+    """
+    return structure.frac_coords.transpose()
+
+
+def get_lattice_vectors(structure: pmg.Structure) -> np.array:
+    """Function to get the lattice vectors for the supercell
+
+    :param structure: supercell
+    :type structure: pmg.Structure
+    :return: 3 x 3 array with each column a lattice vector
+    :rtype: np.array
+    """
+    lattice = structure.lattice.as_dict()
+    return np.vstack(lattice["matrix"]).transpose()
+
+
 @dataclass
 class AtomPositions:
     """Class to manage all the arrays that describe the position of the atoms
@@ -180,8 +235,39 @@ class AtomPositions:
     occupancy_vector: np.array
     current_position_array: np.array
     index_array: np.array
+    frac_coord_array: dict
+    lattice_vectors: np.array
 
     def swap(self, i: int, j: int):
+        """Method to swap the species in sites a and b of the structure
+
+        :param index_a: index of the first species
+        :type index_a: int
+        :param index_b: index of the second species
+        :type index_b: int
+        """
+
+        # input_seq[[ix1, ix2]] = input_seq[[ix2, ix1]]
+
+        # update occupancy vector
+        self.occupancy_vector[[i, j]] = self.occupancy_vector[[j, i]]
+        # temp_i = self.occupancy_vector[i]
+        # self.occupancy_vector[i] = self.occupancy_vector[j]
+        # self.occupancy_vector[j] = temp_i
+
+        # update current_position_array
+        a = np.where(self.index_array == i)
+        b = np.where(self.index_array == j)
+        temp_a = np.copy(self.current_position_array[:, a])
+        self.current_position_array[:, a] = self.current_position_array[:, b]
+        self.current_position_array[:, b] = temp_a
+
+        # update index array
+        temp_i = self.index_array[i]
+        self.index_array[i] = self.index_array[j]
+        self.index_array[j] = temp_i
+
+    def swap2(self, i: int, j: int):
         """Method to swap the species in sites a and b of the structure
 
         :param index_a: index of the first species
@@ -195,12 +281,23 @@ class AtomPositions:
         self.occupancy_vector[j] = temp_i
 
         # update current_position_array
-        # self.current_position_array[:, [a, b]] = self.current_position_array[:, [b, a]]
         a = np.where(self.index_array == i)
         b = np.where(self.index_array == j)
-        temp_a = np.copy(self.current_position_array[:, a])
-        self.current_position_array[:, a] = self.current_position_array[:, b]
-        self.current_position_array[:, b] = temp_a
+
+        distance = self.frac_coord_array[:a] - self.frac_coord_array[:b]
+        a_displacement = [0, 0, 0]
+        b_displacement = [0, 0, 0]
+        for k in range(3):
+            if abs(distance[k]) > 0.5:
+                a_displacement = (1 - abs(distance[k])) * self.lattice_vectors[:k]
+                b_displacement = -(1 - abs(distance[k])) * self.lattice_vectors[:k]
+
+        self.current_position_array[:, a] = (
+            self.current_position_array[:, a] + a_displacement
+        )
+        self.current_position_array[:, b] = (
+            self.current_position_array[:, b] + b_displacement
+        )
 
         # update index array
         temp_i = self.index_array[i]

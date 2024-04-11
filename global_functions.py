@@ -53,7 +53,15 @@ def intialization(
     )
     index_array = structure_management.index_vector_builder(structure)
     vac_position = structure_management.find_vac(occupancy_vector, atom_key)
-    atom_pos = AtomPositions(occupancy_vector, current_position_array, index_array)
+    frac_coord_array = structure_management.frac_coord_array_builder(structure)
+    lattice_vectors = structure_management.get_lattice_vectors(structure)
+    atom_pos = AtomPositions(
+        occupancy_vector,
+        current_position_array,
+        index_array,
+        frac_coord_array,
+        lattice_vectors,
+    )
     time_collector = structure_management.time_collector_builder(
         sampling_frequency, total_nb_steps
     )
@@ -102,21 +110,23 @@ def driver(
     atom_pos = initialized_values["atom_pos"]
     for nb_steps in range(0, initialized_values["total_nb_steps"]):
         freq_neighbours, sum_freq = frequencies.hop_frequency_calculator(
-            vac_position,
-            atom_pos.occupancy_vector,
+            initialized_values["vac_position"],
+            initialized_values["atom_pos"].occupancy_vector,
             initialized_values["neighbour_array"],
             initialized_values["frequency_vector"],
             initialized_values["atom_key"],
         )
         event = frequencies.select_event(freq_neighbours)
-        event = initialized_values["neighbour_array"][event, vac_position]
+        event = initialized_values["neighbour_array"][
+            event, initialized_values["vac_position"]
+        ]
         initialized_values["time"] = initialized_values[
             "time"
         ] + frequencies.time_step_calculator(sum_freq)
-        atom_pos.swap(vac_position, event)
-        vac_position = event
+        initialized_values["atom_pos"].swap(initialized_values["vac_position"], event)
+        initialized_values["vac_position"] = event
         if nb_steps % initialized_values["sampling_frequency"] == 0:
-            data_collector[
+            initialized_values["data_collector"][
                 :, :, int(nb_steps / initialized_values["sampling_frequency"])
-            ] = atom_pos.current_position_array
-    return data_collector, initialized_values["time"]
+            ] = initialized_values["atom_pos"].current_position_array
+    return initialized_values
