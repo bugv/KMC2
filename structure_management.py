@@ -97,6 +97,57 @@ def get_equiv_primative(supercell: pmg.Structure) -> np.array:
     return equivalent_sites_array
 
 
+def get_displacement_primitive_sites(
+    structure: pmg.Structure, radius: float, max_nb_neighbours: int
+) -> np.array:
+    """Create a rank three tensor where each layer contains
+       the displacement vectors for a site in the primitive cell
+
+    :param structure: blank supercell
+    :type structure: pmg.Structure
+    :param radius: radius
+    :type radius: float
+    :param max_nb_neighbours: maximum number of neighbours for a site in this structure
+    :type max_nb_neighbours: int
+    :return: rank three tensor of size 3 x max nb neighbours x nb sites primitive cell,
+    where each layer contains the displacements for one site in the the primitive cell,
+    and each column is a displacement vector
+    :rtype: np.array
+    """
+    primitivecell = SpacegroupAnalyzer(structure).find_primitive()
+    nb_atoms_primitive = primitivecell.num_sites
+    displacement_array = np.full((3, max_nb_neighbours, nb_atoms_primitive), None)
+    equivalent_sites_array = get_equiv_primative(structure)
+    for site_in_prim in range(nb_atoms_primitive):
+        site_in_supercell = np.argwhere(equivalent_sites_array == site_in_prim)[0, 0]
+        print("site in supercell used to get displ", site_in_supercell)
+        displacement_array[:, :, site_in_prim] = get_displacement_vects(
+            structure, site_in_supercell, radius
+        )
+
+    return displacement_array
+
+
+def get_max_nb_neighbours(structure: pmg.Structure, radius: int) -> int:
+    """get the maximum number of neighbours in the structure
+
+    :param structure: supercell
+    :type structure: pmg.Structure
+    :param radius: cutoff radius for neighbours
+    :type radius:
+    :return: the maximum number of neighbours in the structure
+    :rtype: int
+    """
+    neighbour_list = structure.get_neighbor_list(radius)
+    centers_list = neighbour_list[0]
+    nb_sites_struct = structure.num_sites
+    counts = np.full(nb_sites_struct, None)
+    for i in range(nb_sites_struct):
+        counts[i] = np.count_nonzero(centers_list == i)
+    max_neighbours = np.max(counts)
+    return max_neighbours
+
+
 def neighbour_finder(structure: pmg.Structure, radius: float) -> np.array:
     """A function to find the neighbouring sites for each site
 
