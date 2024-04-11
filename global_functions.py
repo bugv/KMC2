@@ -43,6 +43,7 @@ def intialization(
     occupancy_vector = structure_management.occupancy_vector_builder(
         structure, atom_key
     )
+    equivalent_sites_array = structure_management.get_equiv_primative(structure)
     neighour_array = structure_management.neighbour_finder(structure, radius)
     frequency_vector = frequencies.standardize_frequencies(user_frequencies, atom_key)
     current_position_array = structure_management.current_position_array_builder(
@@ -68,6 +69,7 @@ def intialization(
     return {
         "atom_pos": atom_pos,
         "atom_key": atom_key,
+        "equivalent_sites_array": equivalent_sites_array,
         "neighbour_array": neighour_array,
         "frequency_vector": frequency_vector,
         "data_collector": data_collector,

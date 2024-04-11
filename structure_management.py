@@ -132,6 +132,30 @@ def neighbour_finder_v2(structure: pmg.Structure, radius: float) -> np.array:
     return neighbour_array
 
 
+def get_displacement_vects(
+    structure: pmg.Structure, site: int, radius: float
+) -> np.array:
+    """Creates an array containing the displacement vectors for a given site
+
+    :param structure: supercell
+    :type structure: pmg.Structure
+    :param site: site in structure for which displacement vectors are found
+    :type site: int
+    :param radius: cutoff radius for neighbours
+    :type radius: float
+    :return: 3x max nb of neighbours in structure array where each column is a displacement vectors for the site at that index
+    :rtype: np.array
+    """
+    list_neighbours = neighbour_finder(structure, radius)[:, site]
+    displ_vect_array = np.full((3, np.shape(list_neighbours)[0]), None)
+    for n_index, neighbour in np.ndenumerate(list_neighbours):
+        if neighbour is not None:
+            displ = structure.cart_coords[site] - structure.cart_coords[neighbour]
+            displ_vect_array[:, n_index] = np.reshape(displ, (3, 1))
+            print(neighbour, displ)
+    return displ_vect_array
+
+
 def current_position_array_builder(structure: pmg.Structure) -> np.array:
     """Create an array to store the position of the atoms at the current time
 
