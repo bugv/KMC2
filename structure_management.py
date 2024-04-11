@@ -55,19 +55,30 @@ def atom_key_builder(structure: pmg.Structure) -> dict:
     return atom_key
 
 
+def empty_structure(supercell: pmg.Structure) -> pmg.Structure:
+    """Creates a supercell where all sites are occupied by vacancies
+
+    :param supercell: supercell
+    :type supercell: pmg.Structure
+    :return: same supercell where all atoms are replaced by vacancies
+    :rtype: pmg.Structure
+    """
+    for site in supercell:
+        site.species = pmg.DummySpecies("X")
+    return supercell
+
+
 def get_equiv_primative(supercell: pmg.Structure) -> np.array:
     """Create an array which indicates which site in the primitive cell,
        the site in the supercell is equivalent to
 
-    :param supercell: supercell
+    :param supercell: supercell (blank)
     :type supercell: pmg.Structure
     :raises TypeError: check that a site is not equivlent to two sites in the primitive cell
     :raises TypeError: check that all sites in the supercell are equivalent to a site in the primitive cell
     :return: array where at each index there is the equivalent site in the primitive cell
     :rtype: np.array
     """
-    for site in supercell:
-        site.species = pmg.DummySpecies("X")
     primitivecell = SpacegroupAnalyzer(supercell).find_primitive()
     lattice_matrix_inv = np.linalg.inv(np.transpose(primitivecell.lattice.matrix))
     equivalent_sites_array = np.full(supercell.num_sites, None)
@@ -152,7 +163,6 @@ def get_displacement_vects(
         if neighbour is not None:
             displ = structure.cart_coords[site] - structure.cart_coords[neighbour]
             displ_vect_array[:, n_index] = np.reshape(displ, (3, 1))
-            print(neighbour, displ)
     return displ_vect_array
 
 
