@@ -97,6 +97,58 @@ def get_equiv_primative(supercell: pmg.Structure) -> np.array:
     return equivalent_sites_array
 
 
+def get_neighbours_from_displ(
+    structure: pmg.Structure,
+    equivalent_sites_array: np.array,
+    radius: float,
+    disp_tensor: np.array,
+) -> np.array:
+    """Creates a neighbour array from the displacement vectors and the primitive equivalent sites
+
+    :param structure: blank supercell
+    :type structure: pmg.Structure
+    :param equivalent_sites_array: array with equivelent sites in primitive cell
+    :type equivalent_sites_array: np.array
+    :param radius: cutoff radius for neighbours
+    :type radius: float
+    :param disp_tensor: rank three tensor with displacements
+    :type disp_tensor: np.array
+    :raises TypeError: neighbour site from displacement not found in the supercell
+    :return: neighbour array
+    :rtype: np.array
+    """
+    neighbours_array = np.full(
+        (get_max_nb_neighbours(structure, radius), structure.num_sites), None
+    )
+    coords_array = structure.cart_coords  # get array coords all sites in struct
+    sites_list = structure.sites
+    for center_index, center_site in enumerate(
+        coords_array
+    ):  # enumerate sites in supercell
+        prim_equiv = equivalent_sites_array[center_index]  # get prim equiv of site
+        displacements = disp_tensor[
+            :, :, prim_equiv
+        ]  # get displacements for all neihbours of this site
+        for nb_neighbour, displ in enumerate(
+            np.transpose(displacements)
+        ):  # loop over displacements
+            if np.all(displ != None):
+                neighbour_coords = center_site + displ
+                new_site = pmg.PeriodicSite(
+                    species="X",
+                    coords=center_site + displ,
+                    lattice=structure.lattice,
+                    to_unit_cell=True,
+                    coords_are_cartesian=True,
+                )
+                if new_site not in sites_list:
+                    raise TypeError("neighbour site not found in the supercell")
+                neighbours_array[nb_neighbour, center_index] = sites_list.index(
+                    new_site
+                )
+    return neighbours_array
+
+
 def get_displacement_primitive_sites(
     structure: pmg.Structure, radius: float, max_nb_neighbours: int
 ) -> np.array:
@@ -120,7 +172,6 @@ def get_displacement_primitive_sites(
     equivalent_sites_array = get_equiv_primative(structure)
     for site_in_prim in range(nb_atoms_primitive):
         site_in_supercell = np.argwhere(equivalent_sites_array == site_in_prim)[0, 0]
-        print("site in supercell used to get displ", site_in_supercell)
         displacement_array[:, :, site_in_prim] = get_displacement_vects(
             structure, site_in_supercell, radius
         )
@@ -163,10 +214,7 @@ def neighbour_finder(structure: pmg.Structure, radius: float) -> np.array:
     centers_list = neighbour_list[0]
     nearest_sites_list = neighbour_list[1]
 
-    M = 0
-    for index, atom in enumerate(centers_list):
-        if centers_list[index] == 0:
-            M += 1
+    M = get_max_nb_neighbours(structure, radius)
     neighbour_array = np.full((M, N), None)
     for index, atom in enumerate(centers_list):
         added_to_list = False
