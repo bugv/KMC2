@@ -92,7 +92,7 @@ def get_equiv_primative(supercell: pmg.Structure) -> np.array:
                 raise TypeError("site is equivalent to two sites in the primitive cell")
             if equivalent_sites_array[i] is None and is_equiv:
                 equivalent_sites_array[i] = j
-    if np.any(equivalent_sites_array, None) is 0.0:
+    if np.any(equivalent_sites_array, None) == 0.0:
         raise TypeError("one or more sites has no equivalent in the primitive cell")
     return equivalent_sites_array
 
@@ -114,7 +114,7 @@ def get_neighbours_from_displ(
     :param disp_tensor: rank three tensor with displacements
     :type disp_tensor: np.array
     :raises TypeError: neighbour site from displacement not found in the supercell
-    :return: neighbour array
+    :return: neighbour array, where each column contains the neighbours of the atom at that index
     :rtype: np.array
     """
     neighbours_array = np.full(
@@ -149,34 +149,44 @@ def get_neighbours_from_displ(
     return neighbours_array
 
 
-def get_displacement_primitive_sites(
-    structure: pmg.Structure, radius: float, max_nb_neighbours: int
-) -> np.array:
-    """Create a rank three tensor where each layer contains
-       the displacement vectors for a site in the primitive cell
+def get_displacement_tensor(structure: pmg.Structure, radius: float) -> np.array:
+    """Create a rank three tensor of size 3 x max nb of neighbour x nb sites primitive cell
+       with the displacement for each site in the primitive cell.
+       Where each layer contains the displacement vectors for one site in the primitive cell,
+       and each column is a diplacement vector
 
     :param structure: blank supercell
     :type structure: pmg.Structure
-    :param radius: radius
+    :param radius: cutoff radius ffor neighbours
     :type radius: float
-    :param max_nb_neighbours: maximum number of neighbours for a site in this structure
-    :type max_nb_neighbours: int
-    :return: rank three tensor of size 3 x max nb neighbours x nb sites primitive cell,
-    where each layer contains the displacements for one site in the the primitive cell,
-    and each column is a displacement vector
+    :return: randk three tensor of size 3 x max nb neighbours x nb sites primitive cell,
+    where each layer contains the displacement vectors for one site in the primitive cell,
+    and each column is a displacement vector.
     :rtype: np.array
     """
-    primitivecell = SpacegroupAnalyzer(structure).find_primitive()
-    nb_atoms_primitive = primitivecell.num_sites
-    displacement_array = np.full((3, max_nb_neighbours, nb_atoms_primitive), None)
-    equivalent_sites_array = get_equiv_primative(structure)
-    for site_in_prim in range(nb_atoms_primitive):
-        site_in_supercell = np.argwhere(equivalent_sites_array == site_in_prim)[0, 0]
-        displacement_array[:, :, site_in_prim] = get_displacement_vects(
-            structure, site_in_supercell, radius
-        )
-
-    return displacement_array
+    primitive = SpacegroupAnalyzer(structure).find_primitive()
+    neighbour_list = primitive.get_neighbor_list(radius)
+    displ_vect_tensor = np.full(
+        (
+            3,
+            structure_management.get_max_nb_neighbours(structure, radius),
+            primitive.num_sites,
+        ),
+        None,
+    )
+    index_list = np.array([])
+    for i in range(primitive.num_sites):
+        count = np.count_nonzero(neighbour_list[0] == i)
+        indices = np.arange(0, count, 1)
+        index_list = np.append(index_list, indices)
+    lattice = primitive.lattice.matrix
+    for count_center, center in enumerate(neighbour_list[0]):
+        offset = neighbour_list[2][count_center]
+        neighbour_coords = primitive[neighbour_list[1][count_center]].coords
+        neighbour_coords = neighbour_coords + offset @ lattice
+        displ = neighbour_coords - primitive[center].coords
+        displ_vect_tensor[:, int(index_list[count_center]), center] = displ
+    return displ_vect_tensor
 
 
 def get_max_nb_neighbours(structure: pmg.Structure, radius: int) -> int:
