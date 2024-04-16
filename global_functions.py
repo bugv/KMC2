@@ -43,8 +43,16 @@ def intialization(
     occupancy_vector = structure_management.occupancy_vector_builder(
         structure, atom_key
     )
-    equivalent_sites_array = structure_management.get_equiv_primative(structure)
-    neighour_array = structure_management.neighbour_finder(structure, radius)
+    equivalent_sites_array = structure_management.get_equiv_in_primative(structure)
+    displacements_tensor = structure_management.get_displacement_tensor(
+        structure_management.empty_structure(structure), radius
+    )
+    neighour_array = structure_management.get_neighbours_from_displ(
+        structure_management.empty_structure(structure),
+        equivalent_sites_array,
+        radius,
+        displacements_tensor,
+    )
     frequency_vector = frequencies.standardize_frequencies(user_frequencies, atom_key)
     current_position_array = structure_management.current_position_array_builder(
         structure
@@ -54,14 +62,10 @@ def intialization(
     )
     index_array = structure_management.index_vector_builder(structure)
     vac_position = structure_management.find_vac(occupancy_vector, atom_key)
-    frac_coord_array = structure_management.frac_coord_array_builder(structure)
-    lattice_vectors = structure_management.get_lattice_vectors(structure)
     atom_pos = AtomPositions(
         occupancy_vector,
         current_position_array,
         index_array,
-        frac_coord_array,
-        lattice_vectors,
     )
     time_collector = structure_management.time_collector_builder(
         sampling_frequency, total_nb_steps
@@ -78,6 +82,7 @@ def intialization(
         "vac_position": vac_position,
         "time_collector": time_collector,
         "time": 0,
+        "displacement_tensor": displacements_tensor,
     }
     # return (
     #     atom_pos,  # 0

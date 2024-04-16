@@ -4,19 +4,27 @@ It contains functions to load structures, transform pymatgen structures to the c
 and to modify these arrays.
 
 Available functions:
-- atom_key_bulider
 - occupancy_vector_builder
-- neighbour_finder"""
+- atom_key_bulider
+- empty_structure
+- get_equiv_in_primative
+- get_neighbour_from_displ
+- get_displacement_tensor
+- get_max_nb_neighbours
+- neighbour_finder (avoid this as order of neighbours is unknown)
+- current_position_array_builder
+- data_collector_builder
+- time_colector_builder
+- index_vector_builder
+- find_vac
+
+Available class: AtomPositions
+"""
 
 import numpy as np
 import pymatgen.core as pmg
 from dataclasses import dataclass
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-
-## Read from file to structure
-# FUnction to read structure from file and produce a pymatgen structure
-# Input: a file location
-# Output: a pymatgen structure
 
 
 def occupancy_vector_builder(structure: pmg.Structure, atom_key: dict) -> np.array:
@@ -68,7 +76,7 @@ def empty_structure(supercell: pmg.Structure) -> pmg.Structure:
     return supercell
 
 
-def get_equiv_primative(supercell: pmg.Structure) -> np.array:
+def get_equiv_in_primative(supercell: pmg.Structure) -> np.array:
     """Create an array which indicates which site in the primitive cell,
        the site in the supercell is equivalent to
 
@@ -169,7 +177,7 @@ def get_displacement_tensor(structure: pmg.Structure, radius: float) -> np.array
     displ_vect_tensor = np.full(
         (
             3,
-            structure_management.get_max_nb_neighbours(structure, radius),
+            get_max_nb_neighbours(structure, radius),
             primitive.num_sites,
         ),
         None,
@@ -233,46 +241,6 @@ def neighbour_finder(structure: pmg.Structure, radius: float) -> np.array:
                 neighbour_array[m, atom] = nearest_sites_list[index]
                 added_to_list = True
     return neighbour_array
-
-
-def neighbour_finder_v2(structure: pmg.Structure, radius: float) -> np.array:
-    neighbour_list = structure.get_neighbor_list(radius)
-    centers_list = neighbour_list[0]
-    nearest_sites_list = neighbour_list[1]
-    unique, counts = np.unique(centers_list, return_counts=True)
-    m = counts.max()
-    neighbour_array = np.full((m, structure.num_sites), None)  # create neighbour array
-    position_array = np.tile(np.arange(m), (structure.num_sites, 1)).T
-    position_array[:, :] = np.where(
-        np.arange(m) < counts[:, None], np.arange(m), None
-    ).T
-    # position_array = np.full((m, structure.num_sites), None)
-    # position_array[:, :] = np.arange(0, m)
-    print(position_array)
-    return neighbour_array
-
-
-def get_displacement_vects(
-    structure: pmg.Structure, site: int, radius: float
-) -> np.array:
-    """Creates an array containing the displacement vectors for a given site
-
-    :param structure: supercell
-    :type structure: pmg.Structure
-    :param site: site in structure for which displacement vectors are found
-    :type site: int
-    :param radius: cutoff radius for neighbours
-    :type radius: float
-    :return: 3x max nb of neighbours in structure array where each column is a displacement vectors for the site at that index
-    :rtype: np.array
-    """
-    list_neighbours = neighbour_finder(structure, radius)[:, site]
-    displ_vect_array = np.full((3, np.shape(list_neighbours)[0]), None)
-    for n_index, neighbour in np.ndenumerate(list_neighbours):
-        if neighbour is not None:
-            displ = structure.cart_coords[site] - structure.cart_coords[neighbour]
-            displ_vect_array[:, n_index] = np.reshape(displ, (3, 1))
-    return displ_vect_array
 
 
 def current_position_array_builder(structure: pmg.Structure) -> np.array:
@@ -346,17 +314,6 @@ def find_vac(occupancy_vector: np.array, atom_key: dict) -> int:
     return int(vac_pos[0])
 
 
-def frac_coord_array_builder(structure: pmg.Structure) -> np.array:
-    """Function to get fractional coordinates of each site in structure
-
-    :param structure: supercell
-    :type structure: pmg.Structure
-    :return: 3 x nb_sites array with fractional coordinates for each site,
-    :rtype: np.array
-    """
-    return structure.frac_coords.transpose()
-
-
 def get_lattice_vectors(structure: pmg.Structure) -> np.array:
     """Function to get the lattice vectors for the supercell
 
@@ -378,8 +335,6 @@ class AtomPositions:
     occupancy_vector: np.array
     current_position_array: np.array
     index_array: np.array
-    frac_coord_array: dict
-    lattice_vectors: np.array
 
     def swap(self, i: int, j: int):
         """Method to swap the species in sites a and b of the structure
@@ -410,39 +365,39 @@ class AtomPositions:
         self.index_array[i] = self.index_array[j]
         self.index_array[j] = temp_i
 
-    def swap2(self, i: int, j: int):
-        """Method to swap the species in sites a and b of the structure
+    # def swap2(self, i: int, j: int):
+    #     """Method to swap the species in sites a and b of the structure
 
-        :param index_a: index of the first species
-        :type index_a: int
-        :param index_b: index of the second species
-        :type index_b: int
-        """
-        # update occupancy vector
-        temp_i = self.occupancy_vector[i]
-        self.occupancy_vector[i] = self.occupancy_vector[j]
-        self.occupancy_vector[j] = temp_i
+    #     :param index_a: index of the first species
+    #     :type index_a: int
+    #     :param index_b: index of the second species
+    #     :type index_b: int
+    #     """
+    #     # update occupancy vector
+    #     temp_i = self.occupancy_vector[i]
+    #     self.occupancy_vector[i] = self.occupancy_vector[j]
+    #     self.occupancy_vector[j] = temp_i
 
-        # update current_position_array
-        a = np.where(self.index_array == i)
-        b = np.where(self.index_array == j)
+    #     # update current_position_array
+    #     a = np.where(self.index_array == i)
+    #     b = np.where(self.index_array == j)
 
-        distance = self.frac_coord_array[:a] - self.frac_coord_array[:b]
-        a_displacement = [0, 0, 0]
-        b_displacement = [0, 0, 0]
-        for k in range(3):
-            if abs(distance[k]) > 0.5:
-                a_displacement = (1 - abs(distance[k])) * self.lattice_vectors[:k]
-                b_displacement = -(1 - abs(distance[k])) * self.lattice_vectors[:k]
+    #     distance = self.frac_coord_array[:a] - self.frac_coord_array[:b]
+    #     a_displacement = [0, 0, 0]
+    #     b_displacement = [0, 0, 0]
+    #     for k in range(3):
+    #         if abs(distance[k]) > 0.5:
+    #             a_displacement = (1 - abs(distance[k])) * self.lattice_vectors[:k]
+    #             b_displacement = -(1 - abs(distance[k])) * self.lattice_vectors[:k]
 
-        self.current_position_array[:, a] = (
-            self.current_position_array[:, a] + a_displacement
-        )
-        self.current_position_array[:, b] = (
-            self.current_position_array[:, b] + b_displacement
-        )
+    #     self.current_position_array[:, a] = (
+    #         self.current_position_array[:, a] + a_displacement
+    #     )
+    #     self.current_position_array[:, b] = (
+    #         self.current_position_array[:, b] + b_displacement
+    #     )
 
-        # update index array
-        temp_i = self.index_array[i]
-        self.index_array[i] = self.index_array[j]
-        self.index_array[j] = temp_i
+    #     # update index array
+    #     temp_i = self.index_array[i]
+    #     self.index_array[i] = self.index_array[j]
+    #     self.index_array[j] = temp_i
