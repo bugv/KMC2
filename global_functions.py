@@ -66,6 +66,9 @@ def intialization(
         occupancy_vector,
         current_position_array,
         index_array,
+        neighour_array,
+        equivalent_sites_array,
+        displacements_tensor,
     )
     time_collector = structure_management.time_collector_builder(
         sampling_frequency, total_nb_steps
