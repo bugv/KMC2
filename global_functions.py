@@ -13,7 +13,7 @@ import numpy as np
 from structure_management import AtomPositions
 
 
-def intialization(
+def initialization(
     structure,
     user_frequencies: dict,
     radius: float,

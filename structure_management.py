@@ -87,6 +87,7 @@ def get_equiv_in_primative(supercell: pmg.Structure) -> np.array:
     :return: array where at each index there is the equivalent site in the primitive cell
     :rtype: np.array
     """
+    supercell = empty_structure(supercell)
     primitivecell = SpacegroupAnalyzer(supercell).find_primitive()
     lattice_matrix_inv = np.linalg.inv(np.transpose(primitivecell.lattice.matrix))
     equivalent_sites_array = np.full(supercell.num_sites, None)
@@ -113,7 +114,7 @@ def get_neighbours_from_displ(
 ) -> np.array:
     """Creates a neighbour array from the displacement vectors and the primitive equivalent sites
 
-    :param structure: blank supercell
+    :param structure: supercell
     :type structure: pmg.Structure
     :param equivalent_sites_array: array with equivelent sites in primitive cell
     :type equivalent_sites_array: np.array
@@ -125,6 +126,7 @@ def get_neighbours_from_displ(
     :return: neighbour array, where each column contains the neighbours of the atom at that index
     :rtype: np.array
     """
+    structure = empty_structure(structure)
     neighbours_array = np.full(
         (get_max_nb_neighbours(structure, radius), structure.num_sites), None
     )
@@ -150,6 +152,7 @@ def get_neighbours_from_displ(
                 neighbours_array[nb_neighbour, center_index] = sites_list.index(
                     new_site
                 )
+    print("found neighbours properly")
     return neighbours_array
 
 
@@ -190,7 +193,7 @@ def get_displacement_tensor(structure: pmg.Structure, radius: float) -> np.array
        Where each layer contains the displacement vectors for one site in the primitive cell,
        and each column is a diplacement vector
 
-    :param structure: blank supercell
+    :param structure: supercell
     :type structure: pmg.Structure
     :param radius: cutoff radius ffor neighbours
     :type radius: float
@@ -199,6 +202,7 @@ def get_displacement_tensor(structure: pmg.Structure, radius: float) -> np.array
     and each column is a displacement vector.
     :rtype: np.array
     """
+    structure = empty_structure(structure)
     # get primitive cell
     primitive = SpacegroupAnalyzer(structure).find_primitive()
     # get neighbour list (list with centers, list with neighbour index, list with offset, list with distance) for the primitive
