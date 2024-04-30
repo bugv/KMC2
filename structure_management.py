@@ -82,8 +82,8 @@ def get_equiv_in_primative(supercell: pmg.Structure) -> np.array:
 
     :param supercell: supercell
     :type supercell: pmg.Structure
-    :raises TypeError: check that a site is not equivlent to two sites in the primitive cell
-    :raises TypeError: check that all sites in the supercell are equivalent to a site in the primitive cell
+    :raises ValueError: check that a site is not equivlent to two sites in the primitive cell
+    :raises ValueError: check that all sites in the supercell are equivalent to a site in the primitive cell
     :return: array where at each index there is the equivalent site in the primitive cell
     :rtype: np.array
     """
@@ -98,11 +98,13 @@ def get_equiv_in_primative(supercell: pmg.Structure) -> np.array:
             )
             is_equiv = np.all(np.isclose(result, np.round(result), atol=1e-5))
             if is_equiv and equivalent_sites_array[i] is not None:
-                raise TypeError("site is equivalent to two sites in the primitive cell")
+                raise ValueError(
+                    "site is equivalent to two sites in the primitive cell"
+                )
             if equivalent_sites_array[i] is None and is_equiv:
                 equivalent_sites_array[i] = j
     if np.any(equivalent_sites_array, None) != 1:
-        raise TypeError("one or more sites has no equivalent in the primitive cell")
+        raise ValueError("one or more sites has no equivalent in the primitive cell")
     return equivalent_sites_array
 
 
@@ -122,7 +124,7 @@ def get_neighbours_from_displ(
     :type radius: float
     :param disp_tensor: rank three tensor with displacements
     :type disp_tensor: np.array
-    :raises TypeError: neighbour site from displacement not found in the supercell
+    :raises ValueError: neighbour site from displacement not found in the supercell
     :return: neighbour array, where each column contains the neighbours of the atom at that index
     :rtype: np.array
     """
@@ -162,7 +164,7 @@ def get_neighbours_from_displ(
                     if test_dist:
                         index = sites_list.index(site)
                 if index == -1:
-                    raise TypeError("neighbour not found with alternative method")
+                    raise ValueError("neighbour not found with alternative method")
                 neighbours_array[nb_neighbour, center_index] = index
 
     return neighbours_array
@@ -353,7 +355,6 @@ def find_vac(occupancy_vector: np.array, atom_key: dict) -> int:
     :rtype: int
     """
     vac_pos = np.where(occupancy_vector == atom_key["X0+"])
-    print("vac pos", vac_pos, type(vac_pos))
     return int(vac_pos[0])
 
 
@@ -430,7 +431,9 @@ class AtomPositions:
     #       lower risk of copying more than necessary
     # Con: Not really part of the atoms positions
 
-    def swap_disp(
+    # Should it contain a check that the two sites are actually neighbours
+    # Has to contain it because update position is based on them being neighbours
+    def swap_displ(
         self,
         initial: int,
         final: int,
@@ -438,28 +441,38 @@ class AtomPositions:
         # get the neighbour list for the initial site
         neighbours_of_initial = self.neighbbour_list[:, initial]
         # find where in the neighbour list the final site is
+        # np.where not ideal, but looking for an int in a small number
         position_final_in_list = np.where(neighbours_of_initial == final)
-        # Get the prim equiv
+        # Check site is actually a neighbour
+        if np.size(position_final_in_list) == 0:
+            raise ValueError("The two sites are not neighbours")
+        # Get the prim equiv for initial site
         prim_equiv = self.equivalent_sites_in_prim[initial]
-        # use position in neighour list and prim equiv to get displ
+        # use position in neighour list and prim equiv to get displ between initial and final
         displ = self.displacement_tensor[:, position_final_in_list, prim_equiv]
-        # add displ to position of atom in current position array
+        # add displ to position of initial in current position array
+        # for first coord
         self.current_position_array[0, initial] = (
             self.current_position_array[0, initial] + displ[0]
         )
+        # for second coord
         self.current_position_array[1, initial] = (
             self.current_position_array[1, initial] + displ[1]
         )
+        # for third coord
         self.current_position_array[2, initial] = (
             self.current_position_array[2, initial] + displ[2]
         )
-        # update position of final
+        # update position of final by subtracting displ from coords
+        # for first coord
         self.current_position_array[0, final] = (
             self.current_position_array[0, final] - displ[0]
         )
+        # for second coord
         self.current_position_array[1, final] = (
             self.current_position_array[1, final] - displ[1]
         )
+        # for third coord
         self.current_position_array[2, final] = (
             self.current_position_array[2, final] - displ[2]
         )
@@ -467,14 +480,17 @@ class AtomPositions:
         self.occupancy_vector[[initial, final]] = self.occupancy_vector[
             [final, initial]
         ]
-        # update index array
+        # get where the initial is in the index array
+        # TODO is this possible without using the np.where which is a for loop behind the scenes
         pos_initial = np.where(self.index_array == initial)
+        # get where the final is in the index array
         pos_final = np.where(self.index_array == final)
+        # update index array by swapping the index array values
         self.index_array[[pos_initial, pos_final]] = self.index_array[
             [pos_final, pos_initial]
         ]
 
-        neighbour_position_final_rel_to_initial = n
+        # neighbour_position_final_rel_to_initial = n  # What is this line doing
 
     # def swap2(self, i: int, j: int):
     #     """Method to swap the species in sites a and b of the structure
