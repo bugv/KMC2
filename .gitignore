@@ -1,0 +1,5 @@
+#Ignore the python environment
+/env_KMC
+
+#Ignore the vscode configuration
+/.vscode
