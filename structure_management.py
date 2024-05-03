@@ -53,8 +53,8 @@ def atom_key_builder(structure: pmg.Structure) -> dict:
     :return: dict, with types of atoms as key and unique ints as values
     :rtype: dict
     """
-    list_values = list(range(len(structure.elements)))
-    element_list = structure.elements
+    list_values = list(range(len(structure.species)))
+    element_list = structure.species
     for i in range(
         len(element_list)
     ):  # NOTE: not ideal to use range of len but I couldn't enumerate over elements in list to convert them to string
