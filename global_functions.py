@@ -285,6 +285,9 @@ def driver(
             initialized_values["data_collector"][
                 :, :, int(nb_steps / initialized_values["sampling_frequency"])
             ] = initialized_values["atom_pos"].current_position_array
+            initialized_values["time_collector"][
+                int(nb_steps / initialized_values["sampling_frequency"])
+            ] = initialized_values["time"]
             # print(
             #     "when included in data collector",
             #     initialized_values["data_collector"][
