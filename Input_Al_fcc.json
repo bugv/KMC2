@@ -1,0 +1,9 @@
+{"number_steps":100,
+"sampling_frequency":10,
+"neighbour_radius":4,
+"hop_frequencies":{"Al":1},
+"lattice":[[4.04,0,0],[0,4.04,0],[0,0,4.04]],
+"atoms":["Al","Al","Al","Al"],
+"coords":[[0,0,0],[0,0.5,0.5],[0.5,0.5,0],[0.5,0,0.5]],
+"supercell_size":[5,5,5]
+}
