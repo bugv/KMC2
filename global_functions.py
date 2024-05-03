@@ -12,23 +12,37 @@ import frequencies
 import calculators
 import numpy as np
 from pymatgen.core import Lattice, Structure
+import pymatgen.core as pmg
 from structure_management import AtomPositions
 import json
+import time
+import copy
 
 
 def read_input_file(file_name: str) -> tuple:
+    """Reads the data from an input json file and returns a tuple with all of the data.
+       Data is ordered such that it can be directly input into the initialization function
+
+    :param file_name: path to the input file (json)
+    :type file_name: str
+    :return: input ready for initialization, in order: supercell, frequency dict,
+             neighbour radius, sampling frequency, number of steps
+    :rtype: tuple
+    """
     with open(file_name) as json_file:
         data = json.load(json_file)
         number_steps = data["number_steps"]
         samping_frequency = data["sampling_frequency"]
         neighbour_radius = data["neighbour_radius"]
         frequencies_dict = data["hop_frequencies"]
+        frequencies_dict["X0+"] = 0
         lattice = data["lattice"]
-        print("lattice", type(lattice), lattice)
+        supercell_size = data["supercell_size"]
         atoms = data["atoms"]
         coords = data["coords"]
         struct = Structure(lattice, atoms, coords)
-        print(struct)
+        struct = struct * supercell_size
+        struct[3] = pmg.DummySpecies("X")
         return (
             struct,
             frequencies_dict,
@@ -36,6 +50,49 @@ def read_input_file(file_name: str) -> tuple:
             samping_frequency,
             number_steps,
         )
+
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
+
+def write_full_to_json(full_struct: dict, file_name: str):
+    full_struct = copy.deepcopy(full_struct)
+    full_struct["occupancy_vector"] = full_struct["atom_pos"].occupancy_vector
+    full_struct["index_array"] = full_struct["atom_pos"].index_array
+    full_struct["neighbour_array"] = full_struct["atom_pos"].neighbour_list
+    full_struct["equivalent_sites_in_prim"] = full_struct[
+        "atom_pos"
+    ].equivalent_sites_in_prim.tolist()
+    full_struct["current_position_array"] = full_struct[
+        "atom_pos"
+    ].current_position_array.tolist()
+    full_struct["displacement_tensor"] = full_struct["atom_pos"].displacement_tensor
+    del full_struct["atom_pos"]
+    with open(file_name, "w") as json_file:
+        json.dump(full_struct, json_file, cls=NumpyEncoder)
+
+
+def read_full_from_json(file_name: str) -> dict:
+    with open(file_name, "r") as json_file:
+        full_struct = json.load(json_file)
+        full_struct["atom_pos"] = AtomPositions(
+            full_struct["occupancy_vector"],
+            full_struct["current_position_array"],
+            full_struct["index_array"],
+            full_struct["neighbour_list"],
+            full_struct["equivalent_sites_in_prim"],
+            full_struct["displacement_tensor"],
+        )
+        del full_struct["occupancy_vector"]
+        del full_struct["current_position_array"]
+        del full_struct["index_array"]
+        del full_struct["neighbour_list"]
+        del full_struct["equivalent_sites_in_prim"]
+        del full_struct["displacement_tensor"]
 
 
 def initialization(
@@ -64,29 +121,65 @@ def initialization(
     the current position of the vacancy
     :rtype: tuple
     """
+    start_time = time.time()
     atom_key = structure_management.atom_key_builder(structure)
+    end_time = time.time()
+    print("Atom key builder time", end_time - start_time)
+
+    start_time = time.time()
     occupancy_vector = structure_management.occupancy_vector_builder(
         structure, atom_key
     )
+    end_time = time.time()
+    print("Occupancy vector builder time", end_time - start_time)
+
+    start_time = time.time()
     equivalent_sites_array = structure_management.get_equiv_in_primative(structure)
+    end_time = time.time()
+    print("Get equivalent in prim time", end_time - start_time)
+
+    start_time = time.time()
     displacements_tensor = structure_management.get_displacement_tensor(
         structure_management.empty_structure(structure), radius
     )
+    end_time = time.time()
+    print("get displacement tensor time", end_time - start_time)
+
+    start_time = time.time()
     neighour_array = structure_management.get_neighbours_from_displ(
         structure_management.empty_structure(structure),
         equivalent_sites_array,
         radius,
         displacements_tensor,
     )
+    end_time = time.time()
+    print("Get neighbour array time", end_time - start_time)
+
+    start_time = time.time()
     frequency_vector = frequencies.standardize_frequencies(user_frequencies, atom_key)
     current_position_array = structure_management.current_position_array_builder(
         structure
     )
+    end_time = time.time()
+    print("Get frequency vect time", end_time - start_time)
+
+    start_time = time.time()
     data_collector = structure_management.data_collector_builder(
         structure, sampling_frequency, total_nb_steps
     )
+    end_time = time.time()
+    print("build data collector time", end_time - start_time)
+
+    start_time = time.time()
     index_array = structure_management.index_vector_builder(structure)
+    end_time = time.time()
+    print("index vector builder time", end_time - start_time)
+
+    start_time = time.time()
     vac_position = structure_management.find_vac(occupancy_vector, atom_key)
+    end_time = time.time()
+    print("get vac pos time", end_time - start_time)
+
     atom_pos = AtomPositions(
         occupancy_vector,
         current_position_array,
@@ -95,9 +188,14 @@ def initialization(
         equivalent_sites_array,
         displacements_tensor,
     )
+
+    start_time = time.time()
     time_collector = structure_management.time_collector_builder(
         sampling_frequency, total_nb_steps
     )
+    end_time = time.time()
+    print("time collector builder time", end_time - start_time)
+
     print("Completed Initialization")
     return {
         "atom_pos": atom_pos,
