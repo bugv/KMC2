@@ -4,13 +4,38 @@ It conatins functions corresponding to the initialization,
 the main body of the algorithm and the outputting of results
 
 Available functions:
--Initialization"""
+-Initialization
+-Driver"""
 
 import structure_management
 import frequencies
 import calculators
 import numpy as np
+from pymatgen.core import Lattice, Structure
 from structure_management import AtomPositions
+import json
+
+
+def read_input_file(file_name: str) -> tuple:
+    with open(file_name) as json_file:
+        data = json.load(json_file)
+        number_steps = data["number_steps"]
+        samping_frequency = data["sampling_frequency"]
+        neighbour_radius = data["neighbour_radius"]
+        frequencies_dict = data["hop_frequencies"]
+        lattice = data["lattice"]
+        print("lattice", type(lattice), lattice)
+        atoms = data["atoms"]
+        coords = data["coords"]
+        struct = Structure(lattice, atoms, coords)
+        print(struct)
+        return (
+            struct,
+            frequencies_dict,
+            neighbour_radius,
+            samping_frequency,
+            number_steps,
+        )
 
 
 def initialization(
@@ -73,6 +98,7 @@ def initialization(
     time_collector = structure_management.time_collector_builder(
         sampling_frequency, total_nb_steps
     )
+    print("Completed Initialization")
     return {
         "atom_pos": atom_pos,
         "atom_key": atom_key,
@@ -118,25 +144,54 @@ def driver(
     vac_position = initialized_values["vac_position"]
     data_collector = initialized_values["data_collector"]
     atom_pos = initialized_values["atom_pos"]
+    # loop for number of steps required
     for nb_steps in range(0, initialized_values["total_nb_steps"]):
+        # get the frequencies of a swap with the neighbours of the vacancy
         freq_neighbours, sum_freq = frequencies.hop_frequency_calculator(
             initialized_values["vac_position"],
             initialized_values["atom_pos"].occupancy_vector,
             initialized_values["neighbour_array"],
             initialized_values["frequency_vector"],
-            initialized_values["atom_key"],
         )
+        # select the swap -> index of neighbour with which vacancy will switch
         event = frequencies.select_event(freq_neighbours)
+        print("selected event which neighbour", event)
+        # select swap get index of swap site in structure
         event = initialized_values["neighbour_array"][
             event, initialized_values["vac_position"]
         ]
+        print("selected event actual index of neighbour", event)
+        # update time
         initialized_values["time"] = initialized_values[
             "time"
         ] + frequencies.time_step_calculator(sum_freq)
-        initialized_values["atom_pos"].swap(initialized_values["vac_position"], event)
+        # swap
+        # print(
+        #     "current position before swap",
+        #     initialized_values["atom_pos"].current_position_array,
+        # )
+        initialized_values["atom_pos"].swap_displ(
+            initial=initialized_values["vac_position"], final=event
+        )
+        # print(
+        #     "current position after swap",
+        #     initialized_values["atom_pos"].current_position_array,
+        # )
+        # update vacancy position
         initialized_values["vac_position"] = event
         if nb_steps % initialized_values["sampling_frequency"] == 0:
+            # print(
+            #     "current position when sampled",
+            #     initialized_values["atom_pos"].current_position_array,
+            # )
             initialized_values["data_collector"][
                 :, :, int(nb_steps / initialized_values["sampling_frequency"])
             ] = initialized_values["atom_pos"].current_position_array
+            # print(
+            #     "when included in data collector",
+            #     initialized_values["data_collector"][
+            #         :, :, int(nb_steps / initialized_values["sampling_frequency"])
+            #     ],
+            # )
+    print("Completed run")
     return initialized_values
