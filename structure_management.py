@@ -441,7 +441,7 @@ class AtomPositions:
         initial: int,
         final: int,
     ):
-        print("sites swaped", initial, final)
+        # print("sites swaped", initial, final)
         # get the neighbour list for the initial site
         neighbours_of_initial = self.neighbour_list[:, initial]
         # find where in the neighbour list the final site is
@@ -455,12 +455,12 @@ class AtomPositions:
         # get where the initial is in the index array
         # TODO is this possible without using the np.where which is a for loop behind the scenes
         initial_start_index = self.index_array[initial]
-        print("pos_inital (should always be the same)", initial_start_index)
+        # print("pos_inital (should always be the same)", initial_start_index)
         # get where the final is in the index array
         final_start_index = self.index_array[final]
         # use position in neighour list and prim equiv to get displ between initial and final
         displ = self.displacement_tensor[:, position_final_in_list, prim_equiv]
-        print("displ", displ)
+        # print("displ", displ)
         # add displ to position of initial in current position array
         # for first coord
         self.current_position_array[0, initial_start_index] = (
