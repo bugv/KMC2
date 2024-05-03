@@ -103,8 +103,10 @@ def get_equiv_in_primative(supercell: pmg.Structure) -> np.array:
                 )
             if equivalent_sites_array[i] is None and is_equiv:
                 equivalent_sites_array[i] = j
-    if np.any(equivalent_sites_array, None) != 1:
-        raise ValueError("one or more sites has no equivalent in the primitive cell")
+    # if np.any(equivalent_sites_array, None) != 1:
+    #     print("check equivalent sites array", equivalent_sites_array)
+    #     print("test condition", np.any(equivalent_sites_array, None))
+    #     raise ValueError("one or more sites has no equivalent in the primitive cell")
     return equivalent_sites_array
 
 
@@ -302,7 +304,8 @@ def data_collector_builder(
     structure: pmg.Structure, sampling_freq: float, total_number_step: int
 ) -> np.array:
     """Create an array in which to store the position of the atoms at the sampling times
-
+    Each layer is a sampling step (in time), and in each layer, each column corresponds
+    to the coordinates of the atom that started in that site
     :param structure: supercell
     :type structure: pmg.Structure
     :param sampling_freq: Frequency (nb steps) for sampling atom position
@@ -380,7 +383,7 @@ class AtomPositions:
     current_position_array: np.array
     index_array: np.array
     # Unsure to include the following
-    neighbbour_list: np.array
+    neighbour_list: np.array
     equivalent_sites_in_prim: np.array
     displacement_tensor: np.array
 
@@ -438,8 +441,9 @@ class AtomPositions:
         initial: int,
         final: int,
     ):
+        print("sites swaped", initial, final)
         # get the neighbour list for the initial site
-        neighbours_of_initial = self.neighbbour_list[:, initial]
+        neighbours_of_initial = self.neighbour_list[:, initial]
         # find where in the neighbour list the final site is
         # np.where not ideal, but looking for an int in a small number
         position_final_in_list = np.where(neighbours_of_initial == final)
@@ -448,47 +452,48 @@ class AtomPositions:
             raise ValueError("The two sites are not neighbours")
         # Get the prim equiv for initial site
         prim_equiv = self.equivalent_sites_in_prim[initial]
+        # get where the initial is in the index array
+        # TODO is this possible without using the np.where which is a for loop behind the scenes
+        initial_start_index = self.index_array[initial]
+        print("pos_inital (should always be the same)", initial_start_index)
+        # get where the final is in the index array
+        final_start_index = self.index_array[final]
         # use position in neighour list and prim equiv to get displ between initial and final
         displ = self.displacement_tensor[:, position_final_in_list, prim_equiv]
+        print("displ", displ)
         # add displ to position of initial in current position array
         # for first coord
-        self.current_position_array[0, initial] = (
-            self.current_position_array[0, initial] + displ[0]
+        self.current_position_array[0, initial_start_index] = (
+            self.current_position_array[0, initial_start_index] + displ[0]
         )
         # for second coord
-        self.current_position_array[1, initial] = (
-            self.current_position_array[1, initial] + displ[1]
+        self.current_position_array[1, initial_start_index] = (
+            self.current_position_array[1, initial_start_index] + displ[1]
         )
         # for third coord
-        self.current_position_array[2, initial] = (
-            self.current_position_array[2, initial] + displ[2]
+        self.current_position_array[2, initial_start_index] = (
+            self.current_position_array[2, initial_start_index] + displ[2]
         )
         # update position of final by subtracting displ from coords
         # for first coord
-        self.current_position_array[0, final] = (
-            self.current_position_array[0, final] - displ[0]
+        self.current_position_array[0, final_start_index] = (
+            self.current_position_array[0, final_start_index] - displ[0]
         )
         # for second coord
-        self.current_position_array[1, final] = (
-            self.current_position_array[1, final] - displ[1]
+        self.current_position_array[1, final_start_index] = (
+            self.current_position_array[1, final_start_index] - displ[1]
         )
         # for third coord
-        self.current_position_array[2, final] = (
-            self.current_position_array[2, final] - displ[2]
+        self.current_position_array[2, final_start_index] = (
+            self.current_position_array[2, final_start_index] - displ[2]
         )
         # swap in occupancy vector
         self.occupancy_vector[[initial, final]] = self.occupancy_vector[
             [final, initial]
         ]
-        # get where the initial is in the index array
-        # TODO is this possible without using the np.where which is a for loop behind the scenes
-        pos_initial = np.where(self.index_array == initial)
-        # get where the final is in the index array
-        pos_final = np.where(self.index_array == final)
+
         # update index array by swapping the index array values
-        self.index_array[[pos_initial, pos_final]] = self.index_array[
-            [pos_final, pos_initial]
-        ]
+        self.index_array[[initial, final]] = self.index_array[[final, initial]]
 
         # neighbour_position_final_rel_to_initial = n  # What is this line doing
 

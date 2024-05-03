@@ -46,7 +46,6 @@ def hop_frequency_calculator(
     occupancy_vector: np.array,
     neighbour_list: np.array,
     frequency_vect: np.array,
-    atom_key: dict,
 ) -> tuple:
     """Function that calculates the frequency for the possible
        hops with the current position of the atoms
@@ -59,14 +58,13 @@ def hop_frequency_calculator(
     :type neighbour_list: np.array
     :param frequency_vect: frequency of hops depending on atom type
     :type frequency_vect: np.array
-    :param atom_key: atom key
-    :type atom_key: dict
     :return: frequency of the hops for the atoms that are neighbouring the vacancy
              and the sum of the frequencies
     :rtype: tuple
     """
     neighbours = neighbour_list[:, vacancy_position]
-    freq_neighbours = np.full(len(neighbour_list), None)
+    neighbours = np.array([x for x in neighbours if x is not None])
+    freq_neighbours = np.full(len(neighbours), None)
     for count, values in enumerate(neighbours):
         freq_neighbours[count] = frequency_vect[int(occupancy_vector[int(values)])]
     sum_frequencies = np.sum(freq_neighbours)
