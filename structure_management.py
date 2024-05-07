@@ -25,6 +25,7 @@ import numpy as np
 import pymatgen.core as pmg
 from dataclasses import dataclass
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+import psutil
 
 
 def occupancy_vector_builder(structure: pmg.Structure, atom_key: dict) -> np.array:
@@ -137,6 +138,8 @@ def get_neighbours_from_displ(
     coords_array = structure.cart_coords
     sites_list = structure.sites
     for center_index, center_site in enumerate(coords_array):
+        process = psutil.Process()
+        mem_before = process.memory_info().rss / 1024  # in kilobytes
         prim_equiv = equivalent_sites_array[center_index]
         displacements = disp_tensor[:, :, prim_equiv]
         for nb_neighbour, displ in enumerate(np.transpose(displacements)):
@@ -168,6 +171,9 @@ def get_neighbours_from_displ(
                 if index == -1:
                     raise ValueError("neighbour not found with alternative method")
                 neighbours_array[nb_neighbour, center_index] = index
+        mem_after = process.memory_info().rss / 1024  # in kilobytes
+        mem_used = mem_after - mem_before
+        print("mem used for one loop neighbour finder, all neighbours one atom (kilobytes)", mem_used)
 
     return neighbours_array
 

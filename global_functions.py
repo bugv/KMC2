@@ -17,6 +17,7 @@ from structure_management import AtomPositions
 import json
 import time
 import copy
+import psutil
 
 
 def read_input_file(file_name: str) -> tuple:
@@ -122,61 +123,102 @@ def initialization(
     :rtype: tuple
     """
     start_time = time.time()
+    process = psutil.Process()
+    mem_before = process.memory_info().rss / 1024  # in kilobytes
     atom_key = structure_management.atom_key_builder(structure)
+    mem_after = process.memory_info().rss / 1024  # in kilobytes
+    mem_used = mem_after - mem_before
+    print("mem used for atom key builder (kilobytes)", mem_used)
     end_time = time.time()
     print("Atom key builder time", end_time - start_time)
 
     start_time = time.time()
+    process = psutil.Process()
+    mem_before = process.memory_info().rss / 1024  # in kilobytes
     occupancy_vector = structure_management.occupancy_vector_builder(
         structure, atom_key
     )
+    mem_after = process.memory_info().rss / 1024  # in kilobytes
+    mem_used = mem_after - mem_before
+    print("mem used for occupancy vector builder(kilobytes)", mem_used)
     end_time = time.time()
     print("Occupancy vector builder time", end_time - start_time)
 
     start_time = time.time()
+    process = psutil.Process()
+    mem_before = process.memory_info().rss / 1024  # in kilobytes
     equivalent_sites_array = structure_management.get_equiv_in_primative(structure)
+    mem_after = process.memory_info().rss / 1024  # in kilobytes
+    mem_used = mem_after - mem_before
+    print("mem used for get equiv in primative (kilobytes)", mem_used)
     end_time = time.time()
     print("Get equivalent in prim time", end_time - start_time)
 
     start_time = time.time()
+    process = psutil.Process()
+    mem_before = process.memory_info().rss / 1024  # in kilobytes
     displacements_tensor = structure_management.get_displacement_tensor(
         structure_management.empty_structure(structure), radius
     )
+    mem_after = process.memory_info().rss / 1024  # in kilobytes
+    mem_used = mem_after - mem_before
+    print("mem used for get displacements (kilobytes)", mem_used)
     end_time = time.time()
     print("get displacement tensor time", end_time - start_time)
 
     start_time = time.time()
+    process = psutil.Process()
+    mem_before = process.memory_info().rss / 1024  # in kilobytes
     neighour_array = structure_management.get_neighbours_from_displ(
         structure_management.empty_structure(structure),
         equivalent_sites_array,
         radius,
         displacements_tensor,
     )
+    mem_after = process.memory_info().rss / 1024  # in kilobytes
+    mem_used = mem_after - mem_before
+    print("mem used for get neighbours (kilobytes)", mem_used)
     end_time = time.time()
     print("Get neighbour array time", end_time - start_time)
 
     start_time = time.time()
+    process = psutil.Process()
+    mem_before = process.memory_info().rss / 1024  # in kilobytes
     frequency_vector = frequencies.standardize_frequencies(user_frequencies, atom_key)
     current_position_array = structure_management.current_position_array_builder(
         structure
     )
+    mem_after = process.memory_info().rss / 1024  # in kilobytes
+    mem_used = mem_after - mem_before
+    print("mem used for get freq vect (kilobytes)", mem_used)
     end_time = time.time()
     print("Get frequency vect time", end_time - start_time)
 
     start_time = time.time()
+    process = psutil.Process()
+    mem_before = process.memory_info().rss / 1024  # in kilobytes
     data_collector = structure_management.data_collector_builder(
         structure, sampling_frequency, total_nb_steps
     )
+    mem_after = process.memory_info().rss / 1024  # in kilobytes
+    mem_used = mem_after - mem_before
+    print("mem used for build data collector (kilobytes)", mem_used)
     end_time = time.time()
     print("build data collector time", end_time - start_time)
 
-    start_time = time.time()
+    mem_before = process.memory_info().rss / 1024  # in kilobytes
     index_array = structure_management.index_vector_builder(structure)
+
     end_time = time.time()
     print("index vector builder time", end_time - start_time)
 
     start_time = time.time()
+    process = psutil.Process()
+    mem_before = process.memory_info().rss / 1024  # in kilobytes
     vac_position = structure_management.find_vac(occupancy_vector, atom_key)
+    mem_after = process.memory_info().rss / 1024  # in kilobytes
+    mem_used = mem_after - mem_before
+    print("mem used for find vac (kilobytes)", mem_used)
     end_time = time.time()
     print("get vac pos time", end_time - start_time)
 
