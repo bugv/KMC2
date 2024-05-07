@@ -131,19 +131,25 @@ def get_neighbours_from_displ(
     :return: neighbour array, where each column contains the neighbours of the atom at that index
     :rtype: np.array
     """
-    structure = empty_structure(structure)
+    structure = empty_structure(structure)  # ok (not in loop)
     neighbours_array = np.full(
         (get_max_nb_neighbours(structure, radius), structure.num_sites), None
-    )
-    coords_array = structure.cart_coords
-    sites_list = structure.sites
-    for center_index, center_site in enumerate(coords_array):
-        process = psutil.Process()
-        mem_before = process.memory_info().rss / 1024  # in kilobytes
-        prim_equiv = equivalent_sites_array[center_index]
-        displacements = disp_tensor[:, :, prim_equiv]
-        for nb_neighbour, displ in enumerate(np.transpose(displacements)):
-            if np.all(displ != None):
+    )  # ok (not in loop)
+    coords_array = structure.cart_coords  # ok (not in loop)
+    sites_list = structure.sites  # ok (not in loop)
+    process2 = psutil.Process()
+    mem_initial = process2.memory_info().rss / 1024
+    for center_index, center_site in enumerate(
+        coords_array
+    ):  # loop over sites, necessary
+        process = psutil.Process()  # memory monitoring
+        mem_before = process.memory_info().rss / 1024  # in kilobytes #memory monitoring
+        prim_equiv = equivalent_sites_array[center_index]  # Creates a reference
+        displacements = disp_tensor[:, :, prim_equiv]  # creates a reference
+        for nb_neighbour, displ in enumerate(
+            np.transpose(displacements)
+        ):  # loop over the neighbours of the site, necessary
+            if np.all(displ != None):  # test not memory use
                 new_frac_coords = np.mod(
                     np.round(
                         np.array(
@@ -155,25 +161,37 @@ def get_neighbours_from_displ(
                         6,
                     ),
                     1,
-                )
+                )  # creating an array -> new memory allocated -> might be the problem
                 new_site = pmg.PeriodicSite(
                     species="X",
                     coords=np.mod(new_frac_coords, 1),
                     lattice=structure.lattice,
                     to_unit_cell=True,
                     coords_are_cartesian=False,
-                )
-                index = -1
+                )  # creating a site -> new memory allocated -> might be a problem??
+                index = (
+                    -1
+                )  # create an int -> new memory allocated -> should not be a problem
                 for site in structure:
                     test_dist = site.distance(new_site) <= 1e-4
                     if test_dist:
                         index = sites_list.index(site)
                 if index == -1:
                     raise ValueError("neighbour not found with alternative method")
-                neighbours_array[nb_neighbour, center_index] = index
-        mem_after = process.memory_info().rss / 1024  # in kilobytes
-        mem_used = mem_after - mem_before
-        print("mem used for one loop neighbour finder, all neighbours one atom (kilobytes)", mem_used)
+                neighbours_array[nb_neighbour, center_index] = (
+                    index  # change value in the array -> no new memory allocated -> should not be a problem?
+                )
+        mem_after = process.memory_info().rss / 1024  # in kilobytes #memory monitoring
+        mem_used = mem_after - mem_before  # memory monitoring
+        print(
+            "mem used for one loop neighbour finder, all neighbours one atom (kilobytes)",
+            mem_used,
+        )
+        total_mem_so_far = process2.memory_info().rss / 1024
+        print(
+            "Total memory used up to this step in neighbour finder",
+            total_mem_so_far - mem_initial,
+        )
 
     return neighbours_array
 
