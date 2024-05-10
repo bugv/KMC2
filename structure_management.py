@@ -39,11 +39,25 @@ def occupancy_vector_builder(structure: pmg.Structure, atom_key: dict) -> np.arr
     :rtype: np.array
     """
     occupancy_vector = np.empty(structure.num_sites)
-    for i in range(structure.num_sites):  # can't enumerate over empty array
+    for i in range(structure.num_sites):
         occupancy_vector[i] = atom_key[
             str(structure[i].species.elements[0])
         ]  # index 0 because strcuture[i].species.elements is a list with only one entry
     return occupancy_vector
+
+
+def add_vacancy(structure: pmg.Structure, vacancy_position: int) -> pmg.Structure:
+    """Function to add a vacancy to the structure
+
+    :param structure: supercell
+    :type structure: pmg.Structure
+    :param vacancy_position: position in structure to add vacancy
+    :type vacancy_position: int
+    :return: supercell with vacancy added
+    :rtype: pmg.Structure
+    """
+    structure[vacancy_position] = pmg.DummySpecies("X")
+    return structure
 
 
 def atom_key_builder(structure: pmg.Structure) -> dict:
@@ -77,7 +91,9 @@ def empty_structure(supercell: pmg.Structure) -> pmg.Structure:
     return supercell
 
 
-def get_equiv_in_primative(supercell: pmg.Structure) -> np.array:
+def get_equiv_in_primative(
+    primitivecell: pmg.Structure, supercell: pmg.Structure
+) -> np.array:
     """Create an array which indicates which site in the primitive cell,
        the site in the supercell is equivalent to
 
@@ -88,8 +104,7 @@ def get_equiv_in_primative(supercell: pmg.Structure) -> np.array:
     :return: array where at each index there is the equivalent site in the primitive cell
     :rtype: np.array
     """
-    supercell = empty_structure(supercell)
-    primitivecell = SpacegroupAnalyzer(supercell).find_primitive()
+
     lattice_matrix_inv = np.linalg.inv(np.transpose(primitivecell.lattice.matrix))
     equivalent_sites_array = np.full(supercell.num_sites, None)
     for i in range(supercell.num_sites):
@@ -176,6 +191,7 @@ def get_neighbours_from_displ(
                     test_dist = site.distance(new_site) <= 1e-4
                     if test_dist:
                         index = sites_list.index(site)
+                        break
                 if index == -1:
                     raise ValueError("neighbour not found with alternative method")
                 neighbours_array[nb_neighbour, center_index] = (
@@ -226,14 +242,18 @@ def get_displ_one_site(site: int, structure: pmg.Structure, radius: float) -> tu
     return (displacements, indices_neighbours)
 
 
-def get_displacement_tensor(structure: pmg.Structure, radius: float) -> np.array:
+def get_displacement_tensor(
+    primitive: pmg.Structure, supercell: pmg.Structure, radius: float
+) -> np.array:
     """Create a rank three tensor of size 3 x max nb of neighbour x nb sites primitive cell
        with the displacement for each site in the primitive cell.
        Where each layer contains the displacement vectors for one site in the primitive cell,
        and each column is a diplacement vector
 
-    :param structure: supercell
-    :type structure: pmg.Structure
+    :param primitive: primitive cell
+    :type primitive: pmg.Structure
+    :param supercell: supercell
+    :type supercell: pmg.Structure
     :param radius: cutoff radius ffor neighbours
     :type radius: float
     :return: randk three tensor of size 3 x max nb neighbours x nb sites primitive cell,
@@ -313,25 +333,25 @@ def neighbour_finder(structure: pmg.Structure, radius: float) -> np.array:
     return neighbour_array
 
 
-def current_position_array_builder(structure: pmg.Structure) -> np.array:
+def current_position_array_builder(supercell: pmg.Structure) -> np.array:
     """Create an array to store the position of the atoms at the current time
 
-    :param structure: supercell
-    :type structure: pmg.Structure
+    :param supercell: supercell
+    :type supercell: pmg.Structure
     :return: An array with the coordinates of the atoms at the initial time
     :rtype: np.array
     """
-    return structure.cart_coords.transpose()
+    return supercell.cart_coords.transpose()
 
 
 def data_collector_builder(
-    structure: pmg.Structure, sampling_freq: float, total_number_step: int
+    supercell: pmg.Structure, sampling_freq: float, total_number_step: int
 ) -> np.array:
     """Create an array in which to store the position of the atoms at the sampling times
     Each layer is a sampling step (in time), and in each layer, each column corresponds
     to the coordinates of the atom that started in that site
-    :param structure: supercell
-    :type structure: pmg.Structure
+    :param supercell: supercell
+    :type supercell: pmg.Structure
     :param sampling_freq: Frequency (nb steps) for sampling atom position
     :type sampling_freq: float
     :param total_number_step: Number of steps
@@ -340,9 +360,9 @@ def data_collector_builder(
     :rtype: np.array
     """
     data_collector = np.full(
-        (3, structure.num_sites, int(total_number_step / sampling_freq)), None
+        (3, supercell.num_sites, int(total_number_step / sampling_freq)), None
     )
-    data_collector[:, :, 0] = structure.cart_coords.transpose()
+    data_collector[:, :, 0] = supercell.cart_coords.transpose()
     return data_collector
 
 

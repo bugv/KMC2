@@ -33,7 +33,10 @@ def standardize_frequencies(user_frequencies: dict, atom_key: dict) -> np.array:
     :rtype: np.array
     """
     frequency_vector = np.full(len(atom_key), None)
+    print("empty frequency_vector", frequency_vector)
+    print(atom_key)
     for key in atom_key:
+        print(key, user_frequencies[key])
         frequency_vector[atom_key[key]] = user_frequencies[key]
     return frequency_vector
 

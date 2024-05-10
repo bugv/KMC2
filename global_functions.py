@@ -14,6 +14,7 @@ import numpy as np
 from pymatgen.core import Lattice, Structure
 import pymatgen.core as pmg
 from structure_management import AtomPositions
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 import json
 import time
 import copy
@@ -41,15 +42,20 @@ def read_input_file(file_name: str) -> tuple:
         supercell_size = data["supercell_size"]
         atoms = data["atoms"]
         coords = data["coords"]
+        intial_vac_pos = data["initial_vac_pos"]
         struct = Structure(lattice, atoms, coords)
-        struct = struct * supercell_size
-        struct[3] = pmg.DummySpecies("X")
+        primcell = SpacegroupAnalyzer(
+            structure_management.empty_structure(struct)
+        ).find_primitive()
+        supercell = struct * supercell_size
         return (
-            struct,
+            primcell,
+            supercell,
             frequencies_dict,
             neighbour_radius,
             samping_frequency,
             number_steps,
+            intial_vac_pos,
         )
 
 
@@ -81,32 +87,46 @@ def read_full_from_json(file_name: str) -> dict:
     with open(file_name, "r") as json_file:
         full_struct = json.load(json_file)
         full_struct["atom_pos"] = AtomPositions(
-            full_struct["occupancy_vector"],
-            full_struct["current_position_array"],
-            full_struct["index_array"],
-            full_struct["neighbour_list"],
-            full_struct["equivalent_sites_in_prim"],
-            full_struct["displacement_tensor"],
+            np.asarray(full_struct["occupancy_vector"]),
+            np.asarray(full_struct["current_position_array"]),
+            np.asarray(full_struct["index_array"]),
+            np.asarray(full_struct["neighbour_array"]),
+            np.asarray(full_struct["equivalent_sites_in_prim"]),
+            np.asarray(full_struct["displacement_tensor"]),
         )
         del full_struct["occupancy_vector"]
         del full_struct["current_position_array"]
         del full_struct["index_array"]
-        del full_struct["neighbour_list"]
         del full_struct["equivalent_sites_in_prim"]
-        del full_struct["displacement_tensor"]
+        full_struct["equivalent_sites_array"] = np.asarray(
+            full_struct["equivalent_sites_array"]
+        )
+        full_struct["neighbour_array"] = np.asarray(full_struct["neighbour_array"])
+        full_struct["data_collector"] = np.asarray(full_struct["data_collector"])
+        full_struct["frequency_vector"] = np.asarray(full_struct["frequency_vector"])
+        full_struct["time_collector"] = np.asarray(full_struct["time_collector"])
+        full_struct["displacement_tensor"] = np.asarray(
+            full_struct["displacement_tensor"]
+        )
+
+    return full_struct
 
 
 def initialization(
-    structure,
+    primcell,
+    supercell,
     user_frequencies: dict,
     radius: float,
     sampling_frequency: float,
     total_nb_steps: int,
+    initial_vac_pos: int,
 ) -> tuple:
     """Function that runs all of the steps of the initialization
 
-    :param structure: supercell
-    :type structure: _type_
+    :param primcell: primitive cell
+    :type primcell: pmg.Structure
+    :param supercell: supercell
+    :type structure: pmg.Structure
     :param user_frequencies: dict, where the keys are the species in the structure and the values the associated frequency
     :type user_frequencies: dict
     :param radius: Cutoff radius for nearest neighbour
@@ -115,6 +135,8 @@ def initialization(
     :type sampling_frequency: float
     :param total_nb_steps: total number of steps to perform
     :type total_nb_steps: int
+    :param initial_vac_pos: position at which to insert the vacancy
+    :type initial_vac_pos: int
     :return: Tuple containing in order the occupancy vector, the neighbour vector,
     the atom key, the frequency vector, the index_array,
     the current position array, the data collector array,
@@ -122,10 +144,11 @@ def initialization(
     the current position of the vacancy
     :rtype: tuple
     """
+    supercell = structure_management.add_vacancy(supercell, initial_vac_pos)
     start_time = time.time()
     process = psutil.Process()
     mem_before = process.memory_info().rss / 1024  # in kilobytes
-    atom_key = structure_management.atom_key_builder(structure)
+    atom_key = structure_management.atom_key_builder(supercell)
     mem_after = process.memory_info().rss / 1024  # in kilobytes
     mem_used = mem_after - mem_before
     print("mem used for atom key builder (kilobytes)", mem_used)
@@ -136,7 +159,7 @@ def initialization(
     process = psutil.Process()
     mem_before = process.memory_info().rss / 1024  # in kilobytes
     occupancy_vector = structure_management.occupancy_vector_builder(
-        structure, atom_key
+        supercell, atom_key
     )
     mem_after = process.memory_info().rss / 1024  # in kilobytes
     mem_used = mem_after - mem_before
@@ -147,7 +170,9 @@ def initialization(
     start_time = time.time()
     process = psutil.Process()
     mem_before = process.memory_info().rss / 1024  # in kilobytes
-    equivalent_sites_array = structure_management.get_equiv_in_primative(structure)
+    equivalent_sites_array = structure_management.get_equiv_in_primative(
+        primcell, supercell
+    )
     mem_after = process.memory_info().rss / 1024  # in kilobytes
     mem_used = mem_after - mem_before
     print("mem used for get equiv in primative (kilobytes)", mem_used)
@@ -158,7 +183,7 @@ def initialization(
     process = psutil.Process()
     mem_before = process.memory_info().rss / 1024  # in kilobytes
     displacements_tensor = structure_management.get_displacement_tensor(
-        structure_management.empty_structure(structure), radius
+        primcell, supercell, radius
     )
     mem_after = process.memory_info().rss / 1024  # in kilobytes
     mem_used = mem_after - mem_before
@@ -170,7 +195,7 @@ def initialization(
     process = psutil.Process()
     mem_before = process.memory_info().rss / 1024  # in kilobytes
     neighour_array = structure_management.get_neighbours_from_displ(
-        structure_management.empty_structure(structure),
+        structure_management.empty_structure(supercell),
         equivalent_sites_array,
         radius,
         displacements_tensor,
@@ -186,7 +211,7 @@ def initialization(
     mem_before = process.memory_info().rss / 1024  # in kilobytes
     frequency_vector = frequencies.standardize_frequencies(user_frequencies, atom_key)
     current_position_array = structure_management.current_position_array_builder(
-        structure
+        supercell
     )
     mem_after = process.memory_info().rss / 1024  # in kilobytes
     mem_used = mem_after - mem_before
@@ -198,7 +223,7 @@ def initialization(
     process = psutil.Process()
     mem_before = process.memory_info().rss / 1024  # in kilobytes
     data_collector = structure_management.data_collector_builder(
-        structure, sampling_frequency, total_nb_steps
+        supercell, sampling_frequency, total_nb_steps
     )
     mem_after = process.memory_info().rss / 1024  # in kilobytes
     mem_used = mem_after - mem_before
@@ -207,7 +232,7 @@ def initialization(
     print("build data collector time", end_time - start_time)
 
     mem_before = process.memory_info().rss / 1024  # in kilobytes
-    index_array = structure_management.index_vector_builder(structure)
+    index_array = structure_management.index_vector_builder(supercell)
 
     end_time = time.time()
     print("index vector builder time", end_time - start_time)
@@ -252,6 +277,7 @@ def initialization(
         "time_collector": time_collector,
         "time": 0,
         "displacement_tensor": displacements_tensor,
+        "initial_vac_pos": vac_position,
     }
     # return (
     #     atom_pos,  # 0
@@ -330,6 +356,7 @@ def driver(
             initialized_values["time_collector"][
                 int(nb_steps / initialized_values["sampling_frequency"])
             ] = initialized_values["time"]
+            print("time recorded", initialized_values["time_collector"])
             # print(
             #     "when included in data collector",
             #     initialized_values["data_collector"][

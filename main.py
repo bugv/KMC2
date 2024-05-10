@@ -10,6 +10,9 @@ file_name = input("Please enter the name of the input file: ")
 input_data = global_functions.read_input_file(file_name)
 print("Input read from file")
 
+print(input_data)
+
+
 # Run initialization
 start_time = time.time()
 process = psutil.Process()
