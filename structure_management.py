@@ -69,7 +69,7 @@ def atom_key_builder(structure: pmg.Structure) -> dict:
     :rtype: dict
     """
     list_values = list(range(len(structure.species)))
-    element_list = structure.species
+    element_list = structure.elements
     for i in range(
         len(element_list)
     ):  # NOTE: not ideal to use range of len but I couldn't enumerate over elements in list to convert them to string
@@ -212,6 +212,39 @@ def get_neighbours_from_displ(
     return neighbours_array
 
 
+def alternate_neighbour_finder(supercell: pmg.Structure, radius: float) -> np.array:
+    """Function to create an array containing the neighbours of a site. Method based on always ordering the neighbours in the same order based on their displacements relative to the central site.
+
+    :param supercell: supercell
+    :type supercell: pmg.Structure
+    :param radius: cutoff radius for neighbours
+    :type radius: float
+    :return: Array where each columns contains the index of the neighbours of the site with the same index as the column.
+    :rtype: np.array
+    """
+    max_nb_neighbours = get_max_nb_neighbours(supercell, radius)
+    nb_sites = supercell.num_sites
+    neighbour_array = np.full((max_nb_neighbours, nb_sites), None)
+    csites, nsites, offsets, dists = supercell.get_neighbor_list(radius)
+    cart_nsites = np.array([supercell.sites[i].coords for i in nsites])  # loop
+    cart_csites = np.array([supercell.sites[i].coords for i in csites])  # loop
+    lattice = get_lattice_vectors(supercell).transpose()
+    displs = cart_nsites - cart_csites + offsets @ lattice
+    sorter = np.lexsort(
+        (
+            displs[:, 2],
+            displs[:, 1],
+            displs[:, 0],
+        )
+    )
+    sorted_displs = displs[sorter]
+    sorted_csites = csites[sorter]
+    sorted_nsites = nsites[sorter]
+    for index in range(np.shape(neighbour_array)[1]):
+        neighbour_array[:, index] = sorted_nsites[np.where(sorted_csites == index)]
+    return neighbour_array
+
+
 def get_displ_one_site(site: int, structure: pmg.Structure, radius: float) -> tuple:
     """Function that gets the displacement vectors for a given site in a structure
 
@@ -261,13 +294,12 @@ def get_displacement_tensor(
     and each column is a displacement vector.
     :rtype: np.array
     """
-    structure = empty_structure(structure)
-    primitive = SpacegroupAnalyzer(structure).find_primitive()
+
     neighbour_list = primitive.get_neighbor_list(radius)
     displ_vect_tensor = np.full(
         (
             3,
-            get_max_nb_neighbours(structure, radius),
+            get_max_nb_neighbours(supercell, radius),
             primitive.num_sites,
         ),
         None,
@@ -406,7 +438,8 @@ def find_vac(occupancy_vector: np.array, atom_key: dict) -> int:
 
 
 def get_lattice_vectors(structure: pmg.Structure) -> np.array:
-    """Function to get the lattice vectors for the supercell
+    """Function to get the lattice vectors forprint(csites)
+    print(cart_csites) the supercell
 
     :param structure: supercell
     :type structure: pmg.Structure

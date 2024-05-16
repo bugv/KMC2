@@ -47,15 +47,16 @@ def read_input_file(file_name: str) -> tuple:
         primcell = SpacegroupAnalyzer(
             structure_management.empty_structure(struct)
         ).find_primitive()
+        struct = Structure(lattice, atoms, coords)
         supercell = struct * supercell_size
         return (
-            primcell,
-            supercell,
-            frequencies_dict,
-            neighbour_radius,
-            samping_frequency,
-            number_steps,
-            intial_vac_pos,
+            primcell,  # 0
+            supercell,  # 1
+            frequencies_dict,  # 2
+            neighbour_radius,  # 3
+            samping_frequency,  # 4
+            number_steps,  # 5
+            intial_vac_pos,  # 6
         )
 
 
@@ -145,6 +146,7 @@ def initialization(
     :rtype: tuple
     """
     supercell = structure_management.add_vacancy(supercell, initial_vac_pos)
+
     start_time = time.time()
     process = psutil.Process()
     mem_before = process.memory_info().rss / 1024  # in kilobytes
@@ -194,11 +196,9 @@ def initialization(
     start_time = time.time()
     process = psutil.Process()
     mem_before = process.memory_info().rss / 1024  # in kilobytes
-    neighour_array = structure_management.get_neighbours_from_displ(
-        structure_management.empty_structure(supercell),
-        equivalent_sites_array,
+    neighour_array = structure_management.alternate_neighbour_finder(
+        supercell,
         radius,
-        displacements_tensor,
     )
     mem_after = process.memory_info().rss / 1024  # in kilobytes
     mem_used = mem_after - mem_before
@@ -262,6 +262,7 @@ def initialization(
     )
     end_time = time.time()
     print("time collector builder time", end_time - start_time)
+    print("time collector", np.shape(time_collector), time_collector)
 
     print("Completed Initialization")
     return {
@@ -354,7 +355,7 @@ def driver(
                 :, :, int(nb_steps / initialized_values["sampling_frequency"])
             ] = initialized_values["atom_pos"].current_position_array
             initialized_values["time_collector"][
-                int(nb_steps / initialized_values["sampling_frequency"])
+                0, int(nb_steps / initialized_values["sampling_frequency"])
             ] = initialized_values["time"]
             print("time recorded", initialized_values["time_collector"])
             # print(
