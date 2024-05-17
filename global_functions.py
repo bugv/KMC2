@@ -278,7 +278,7 @@ def initialization(
         "time_collector": time_collector,
         "time": 0,
         "displacement_tensor": displacements_tensor,
-        "initial_vac_pos": vac_position,
+        "initial_vac_position": vac_position,
     }
     # return (
     #     atom_pos,  # 0

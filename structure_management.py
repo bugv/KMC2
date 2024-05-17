@@ -289,12 +289,11 @@ def get_displacement_tensor(
     :type supercell: pmg.Structure
     :param radius: cutoff radius ffor neighbours
     :type radius: float
-    :return: randk three tensor of size 3 x max nb neighbours x nb sites primitive cell,
+    :return: randk three tensor of size   max nb neighbours x 3 x nb sites primitive cell,
     where each layer contains the displacement vectors for one site in the primitive cell,
-    and each column is a displacement vector.
+    and each row is a displacement vector.
     :rtype: np.array
     """
-
     neighbour_list = primitive.get_neighbor_list(radius)
     displ_vect_tensor = np.full(
         (
@@ -306,6 +305,7 @@ def get_displacement_tensor(
     )
     index_list = np.array([])
     for i in range(primitive.num_sites):
+
         count = np.count_nonzero(neighbour_list[0] == i)
         indices = np.arange(0, count, 1)
         index_list = np.append(index_list, indices)
@@ -316,7 +316,19 @@ def get_displacement_tensor(
         neighbour_coords = neighbour_coords + offset @ lattice
         displ = neighbour_coords - primitive[center].coords
         displ_vect_tensor[:, int(index_list[count_center]), center] = displ
-    return displ_vect_tensor
+    # transpose array to apply lex sort
+    displ_vect_tensor = np.transpose(displ_vect_tensor, (1, 0, 2))
+    # lex sort, need to split array into layers and sort each layer individually
+    # create empty array that has the same shape as the
+    sorted_displ_tensor = np.empty_like(displ_vect_tensor)
+    for i in range(np.shape(sorted_displ_tensor)[2]):
+        layer = displ_vect_tensor[:, :, i]
+        sorter = np.lexsort((layer[:, 2], layer[:, 1], layer[:, 0]))
+        sorted_displ_tensor[:, :, i] = layer[sorter]
+    sorted_displ_tensor = np.transpose(sorted_displ_tensor, (1, 0, 2))
+    # transpose array back to initial shape
+
+    return sorted_displ_tensor
 
 
 def get_max_nb_neighbours(structure: pmg.Structure, radius: int) -> int:
