@@ -42,7 +42,6 @@ def read_input_file(file_name: str) -> tuple:
         supercell_size = data["supercell_size"]
         atoms = data["atoms"]
         coords = data["coords"]
-        intial_vac_pos = data["initial_vac_pos"]
         struct = Structure(lattice, atoms, coords)
         primcell = SpacegroupAnalyzer(
             structure_management.empty_structure(struct)
@@ -56,7 +55,6 @@ def read_input_file(file_name: str) -> tuple:
             neighbour_radius,  # 3
             samping_frequency,  # 4
             number_steps,  # 5
-            intial_vac_pos,  # 6
         )
 
 
@@ -120,7 +118,6 @@ def initialization(
     radius: float,
     sampling_frequency: float,
     total_nb_steps: int,
-    initial_vac_pos: int,
 ) -> tuple:
     """Function that runs all of the steps of the initialization
 
@@ -136,8 +133,6 @@ def initialization(
     :type sampling_frequency: float
     :param total_nb_steps: total number of steps to perform
     :type total_nb_steps: int
-    :param initial_vac_pos: position at which to insert the vacancy
-    :type initial_vac_pos: int
     :return: Tuple containing in order the occupancy vector, the neighbour vector,
     the atom key, the frequency vector, the index_array,
     the current position array, the data collector array,
@@ -145,7 +140,8 @@ def initialization(
     the current position of the vacancy
     :rtype: tuple
     """
-    supercell = structure_management.add_vacancy(supercell, initial_vac_pos)
+    supercell, initial_vac_pos = structure_management.add_vacancy_random(supercell)
+    # supercell = structure_management.add_vacancy(supercell, initial_vac_pos)
 
     start_time = time.time()
     process = psutil.Process()
@@ -262,8 +258,6 @@ def initialization(
     )
     end_time = time.time()
     print("time collector builder time", end_time - start_time)
-    print("time collector", np.shape(time_collector), time_collector)
-
     print("Completed Initialization")
     return {
         "atom_pos": atom_pos,
@@ -322,12 +316,12 @@ def driver(
         )
         # select the swap -> index of neighbour with which vacancy will switch
         event = frequencies.select_event(freq_neighbours)
-        print("selected event which neighbour", event)
+        # print("selected event which neighbour", event)
         # select swap get index of swap site in structure
         event = initialized_values["neighbour_array"][
             event, initialized_values["vac_position"]
         ]
-        print("selected event actual index of neighbour", event)
+        # print("selected event actual index of neighbour", event)
         # update time
         initialized_values["time"] = initialized_values[
             "time"
@@ -357,7 +351,7 @@ def driver(
             initialized_values["time_collector"][
                 0, int(nb_steps / initialized_values["sampling_frequency"])
             ] = initialized_values["time"]
-            print("time recorded", initialized_values["time_collector"])
+            # print("time recorded", initialized_values["time_collector"])
             # print(
             #     "when included in data collector",
             #     initialized_values["data_collector"][

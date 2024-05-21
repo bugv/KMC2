@@ -60,6 +60,27 @@ def add_vacancy(structure: pmg.Structure, vacancy_position: int) -> pmg.Structur
     return structure
 
 
+def add_vacancy_random(structure: pmg.Structure) -> tuple:
+    """Function to randomly select the starting position of the vacancy
+
+    :param structure: supercell
+    :type structure: pmg.Structure
+    :return: supercell with vacancy added and an int corresponding to the position of the vacancy
+    :rtype: tuple
+    """
+    # Get number of sites in the structure
+    num_sites = structure.num_sites
+    # get random number between 0 and the number of sites in the structure -1
+    rng = np.random.default_rng()
+    vacancy_position = int(np.floor(rng.random() * num_sites))
+    # random between 0 and 1
+    # get random int -> get random 0 to 1, multiply by max value, get the floor
+    structure[vacancy_position] = pmg.DummySpecies("X")
+    return structure, vacancy_position
+    # add vacancy at that position
+    # return the structure
+
+
 def atom_key_builder(structure: pmg.Structure) -> dict:
     """Create a dict to link atom type to an integer
 
@@ -199,15 +220,15 @@ def get_neighbours_from_displ(
                 )
         mem_after = process.memory_info().rss / 1024  # in kilobytes #memory monitoring
         mem_used = mem_after - mem_before  # memory monitoring
-        print(
-            "mem used for one loop neighbour finder, all neighbours one atom (kilobytes)",
-            mem_used,
-        )
+        # print(
+        #     "mem used for one loop neighbour finder, all neighbours one atom (kilobytes)",
+        #     mem_used,
+        # )
         total_mem_so_far = process2.memory_info().rss / 1024
-        print(
-            "Total memory used up to this step in neighbour finder",
-            total_mem_so_far - mem_initial,
-        )
+        # print(
+        #     "Total memory used up to this step in neighbour finder",
+        #     total_mem_so_far - mem_initial,
+        # )
 
     return neighbours_array
 
