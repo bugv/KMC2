@@ -81,6 +81,44 @@ def add_vacancy_random(structure: pmg.Structure) -> tuple:
     # return the structure
 
 
+def create_alloy(structure: pmg.Structure, composition: dict) -> pmg.Structure:
+    """Function to create a random alloy based on a composition
+
+    :param structure: supercell in which to create the alloy
+    :type structure: pmg.Structure
+    :param composition: dict where the keys are the elements and the values their fractional composition
+    :type composition: dict
+    :raises ValueError: checks that the composition adds up to 1 (tolerance of 1e-4)
+    :return: structure where types of atoms satisfy the requested composition
+    :rtype: pmg.Structure
+    """
+    elem_array = np.array(list(composition.keys()))
+    comp_array = np.array(list(composition.values()))
+    if np.isclose(np.sum(comp_array), 1, rtol=1e-4, atol=1e-3) == False:
+        raise ValueError(
+            "The sum of the composition of the alloy is not 1. Check the composition of the alloy"
+        )
+    num_sites_elem = np.floor(comp_array * structure.num_sites).astype(int)
+    if np.sum(num_sites_elem) != structure.num_sites:
+        num_atoms_to_add = structure.num_sites - np.sum(num_sites_elem)
+        np.argmax(num_sites_elem)
+        num_sites_elem[np.argmax(num_sites_elem)] += num_atoms_to_add
+    list_sites = np.arange(structure.num_sites)
+    random_order_sites = np.random.permutation(list_sites)
+    elements_repeated = np.repeat(elem_array, num_sites_elem)
+    for site in range(structure.num_sites):
+        structure[int(random_order_sites[site])] = elements_repeated[site]
+    for elem in elem_array:
+        print("elem test", elem)
+        print(
+            "Composition of the structure created:",
+            elem,
+            " = ",
+            structure.composition.get_atomic_fraction(elem),
+        )
+    return structure
+
+
 def atom_key_builder(structure: pmg.Structure) -> dict:
     """Create a dict to link atom type to an integer
 
