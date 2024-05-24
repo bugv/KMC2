@@ -15,6 +15,7 @@ from pymatgen.core import Lattice, Structure
 import pymatgen.core as pmg
 from structure_management import AtomPositions
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+from pymatgen.io.vasp import Poscar
 import json
 import time
 import copy
@@ -48,6 +49,46 @@ def read_input_file(file_name: str) -> tuple:
         ).find_primitive()
         struct = Structure(lattice, atoms, coords)
         supercell = struct * supercell_size
+        return (
+            primcell,  # 0
+            supercell,  # 1
+            frequencies_dict,  # 2
+            neighbour_radius,  # 3
+            samping_frequency,  # 4
+            number_steps,  # 5
+        )
+
+
+def read_input_file_concentration(file_name: str) -> tuple:
+    """Reads the data from an input json file and returns a tuple with all of the data.
+       Data is ordered such that it can be directly input into the initialization function
+       This version is to crate a random structure given  a concentration
+
+    :param file_name: path to the input file (json)
+    :type file_name: str
+    :return: input ready for initialization, in order: supercell, frequency dict,
+             neighbour radius, sampling frequency, number of steps
+    :rtype: tuple
+    """
+    with open(file_name) as json_file:
+        data = json.load(json_file)
+        number_steps = data["number_steps"]
+        samping_frequency = data["sampling_frequency"]
+        neighbour_radius = data["neighbour_radius"]
+        frequencies_dict = data["hop_frequencies"]
+        frequencies_dict["X0+"] = 0
+        lattice = data["lattice"]
+        supercell_size = data["supercell_size"]
+        atoms = data["atoms"]
+        coords = data["coords"]
+        concentrations = data["concentration"]
+        struct = Structure(lattice, atoms, coords)
+        primcell = SpacegroupAnalyzer(
+            structure_management.empty_structure(struct)
+        ).find_primitive()
+        struct = Structure(lattice, atoms, coords)
+        supercell = struct * supercell_size
+        supercell = structure_management.create_alloy(supercell, concentrations)
         return (
             primcell,  # 0
             supercell,  # 1
@@ -109,6 +150,16 @@ def read_full_from_json(file_name: str) -> dict:
         )
 
     return full_struct
+
+
+def write_struct_to_poscar(structure: pmg.Structure) -> None:
+    """Function to write a pymatgen structure as a POSCAR file. The output will have the name "POSCAR"
+
+    :param structure: the structure to write to the file
+    :type structure: pmg.Structure
+    """
+    structure_as_poscar = Poscar(structure, sort_structure=True)
+    structure_as_poscar.write_file("POSCAR")
 
 
 def initialization(
