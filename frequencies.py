@@ -66,7 +66,9 @@ def hop_frequency_calculator(
     :rtype: tuple
     """
     neighbours = neighbour_list[:, vacancy_position]
-    neighbours = np.array([x for x in neighbours if x is not None])
+    neighbours = np.array(
+        [x for x in neighbours if x is not None]
+    )  # loops over the array with the neighbours of the vacancy
     freq_neighbours = np.full(len(neighbours), None)
     for count, values in enumerate(neighbours):  # loops over the neighbours of the site
         freq_neighbours[count] = frequency_vect[int(occupancy_vector[int(values)])]

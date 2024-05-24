@@ -38,7 +38,7 @@ def read_input_file(file_name: str) -> tuple:
         samping_frequency = data["sampling_frequency"]
         neighbour_radius = data["neighbour_radius"]
         frequencies_dict = data["hop_frequencies"]
-        frequencies_dict["X0+"] = 0
+        frequencies_dict["X0+"] = 0.0
         lattice = data["lattice"]
         supercell_size = data["supercell_size"]
         atoms = data["atoms"]
@@ -76,7 +76,7 @@ def read_input_file_composition(file_name: str) -> tuple:
         samping_frequency = data["sampling_frequency"]
         neighbour_radius = data["neighbour_radius"]
         frequencies_dict = data["hop_frequencies"]
-        frequencies_dict["X0+"] = 0
+        frequencies_dict["X0+"] = 0.0
         lattice = data["lattice"]
         supercell_size = data["supercell_size"]
         atoms = data["atoms"]
@@ -363,6 +363,28 @@ def driver(
     random_array = np.random.random((2, initialized_values["total_nb_steps"]))
     end_time = time.time()
     print("time needed to create an array of random numbers", end_time - start_time)
+
+    ### Try to accelerate the hop frequency calculator by calculating once if all frequencies are the same
+    # Check if frequencies are the same
+    frequency_vect = initialized_values["frequency_vector"].astype(float)
+    equal_freqs = np.allclose(
+        frequency_vect[:-1],
+        frequency_vect[0],
+        rtol=1e-5,
+        atol=1e-8,
+    )
+    if equal_freqs:
+        freq_neighbours, sum_freq = frequencies.hop_frequency_calculator(
+            initialized_values["vac_position"],
+            initialized_values["atom_pos"].occupancy_vector,
+            initialized_values["neighbour_array"],
+            initialized_values["frequency_vector"],
+        )
+    # if yes -> calculate frequencies once, set a variable to true
+    # if no -> set the variale to false
+
+    ### End of modifications to accelerate the hop frequencies
+
     ## temp variables created to track run times
     timer_hop_frequency_calculator = 0
     timer_select_event = 0
@@ -375,12 +397,22 @@ def driver(
         # get the frequencies of a swap with the neighbours of the vacancy
 
         start_time = time.time()
-        freq_neighbours, sum_freq = frequencies.hop_frequency_calculator(
-            initialized_values["vac_position"],
-            initialized_values["atom_pos"].occupancy_vector,
-            initialized_values["neighbour_array"],
-            initialized_values["frequency_vector"],
-        )
+        # freq_neighbours, sum_freq = frequencies.hop_frequency_calculator(
+        #     initialized_values["vac_position"],
+        #     initialized_values["atom_pos"].occupancy_vector,
+        #     initialized_values["neighbour_array"],
+        #     initialized_values["frequency_vector"],
+        # )
+        if not equal_freqs:
+            freq_neighbours, sum_freq = frequencies.hop_frequency_calculator(
+                initialized_values["vac_position"],
+                initialized_values["atom_pos"].occupancy_vector,
+                initialized_values["neighbour_array"],
+                initialized_values["frequency_vector"],
+            )
+        ### Alternate version which is faster is all frequencies are the same
+
+        ### End Alternate version which is faster if all frequencies are the same
         end_time = time.time()
         timer_hop_frequency_calculator = timer_hop_frequency_calculator + (
             end_time - start_time
