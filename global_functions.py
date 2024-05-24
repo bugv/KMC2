@@ -59,7 +59,7 @@ def read_input_file(file_name: str) -> tuple:
         )
 
 
-def read_input_file_concentration(file_name: str) -> tuple:
+def read_input_file_composition(file_name: str) -> tuple:
     """Reads the data from an input json file and returns a tuple with all of the data.
        Data is ordered such that it can be directly input into the initialization function
        This version is to crate a random structure given  a concentration
@@ -81,14 +81,14 @@ def read_input_file_concentration(file_name: str) -> tuple:
         supercell_size = data["supercell_size"]
         atoms = data["atoms"]
         coords = data["coords"]
-        concentrations = data["concentration"]
+        composition = data["composition"]
         struct = Structure(lattice, atoms, coords)
         primcell = SpacegroupAnalyzer(
             structure_management.empty_structure(struct)
         ).find_primitive()
         struct = Structure(lattice, atoms, coords)
         supercell = struct * supercell_size
-        supercell = structure_management.create_alloy(supercell, concentrations)
+        supercell = structure_management.create_alloy(supercell, composition)
         return (
             primcell,  # 0
             supercell,  # 1
@@ -170,7 +170,7 @@ def initialization(
     sampling_frequency: float,
     total_nb_steps: int,
 ) -> tuple:
-    """Function that runs all of the steps of the initialization
+    """Function that runs all of the steps of the initialization and writes the initial supercell to a POSCAR file
 
     :param primcell: primitive cell
     :type primcell: pmg.Structure
@@ -310,6 +310,8 @@ def initialization(
     end_time = time.time()
     print("time collector builder time", end_time - start_time)
     print("Completed Initialization")
+
+    write_struct_to_poscar(supercell)
     return {
         "atom_pos": atom_pos,
         "atom_key": atom_key,
@@ -323,7 +325,7 @@ def initialization(
         "time_collector": time_collector,
         "time": 0,
         "displacement_tensor": displacements_tensor,
-        "initial_vac_position": vac_position,
+        "initial_vac_position": initial_vac_pos,
     }
     # return (
     #     atom_pos,  # 0
@@ -357,51 +359,96 @@ def driver(
     data_collector = initialized_values["data_collector"]
     atom_pos = initialized_values["atom_pos"]
     # loop for number of steps required
+    start_time = time.time()
+    random_array = np.random.random((2, initialized_values["total_nb_steps"]))
+    end_time = time.time()
+    print("time needed to create an array of random numbers", end_time - start_time)
+    ## temp variables created to track run times
+    timer_hop_frequency_calculator = 0
+    timer_select_event = 0
+    timer_timestep = 0
+    timer_swap = 0
+    timer_update_position_vac = 0
+    timer_sampling = 0
+    ## end of temp variable definition
     for nb_steps in range(0, initialized_values["total_nb_steps"]):
         # get the frequencies of a swap with the neighbours of the vacancy
+
+        start_time = time.time()
         freq_neighbours, sum_freq = frequencies.hop_frequency_calculator(
             initialized_values["vac_position"],
             initialized_values["atom_pos"].occupancy_vector,
             initialized_values["neighbour_array"],
             initialized_values["frequency_vector"],
         )
+        end_time = time.time()
+        timer_hop_frequency_calculator = timer_hop_frequency_calculator + (
+            end_time - start_time
+        )
+
         # select the swap -> index of neighbour with which vacancy will switch
-        event = frequencies.select_event(freq_neighbours)
+        start_time = time.time()
+        # event = frequencies.select_event(freq_neighbours)
+        event = frequencies.select_event_alternative(
+            random_array, nb_steps, freq_neighbours
+        )
         # print("selected event which neighbour", event)
         # select swap get index of swap site in structure
         event = initialized_values["neighbour_array"][
             event, initialized_values["vac_position"]
         ]
+        end_time = time.time()
+        timer_select_event = timer_select_event + (end_time - start_time)
         # print("selected event actual index of neighbour", event)
         # update time
+
+        start_time = time.time()
+        # initialized_values["time"] = initialized_values[
+        #     "time"
+        # ] + frequencies.time_step_calculator(sum_freq)
+
         initialized_values["time"] = initialized_values[
             "time"
-        ] + frequencies.time_step_calculator(sum_freq)
+        ] + frequencies.time_step_calculator_alternative(
+            random_array, nb_steps, sum_freq
+        )
+        end_time = time.time()
+        timer_timestep = timer_timestep + (end_time - start_time)
         # swap
         # print(
         #     "current position before swap",
         #     initialized_values["atom_pos"].current_position_array,
         # )
+        start_time = time.time()
         initialized_values["atom_pos"].swap_displ(
             initial=initialized_values["vac_position"], final=event
         )
+        end_time = time.time()
+        timer_swap = timer_swap + (end_time - start_time)
         # print(
         #     "current position after swap",
         #     initialized_values["atom_pos"].current_position_array,
         # )
         # update vacancy position
+
+        start_time = time.time()
         initialized_values["vac_position"] = event
+        end_time = time.time()
+        timer_update_position_vac = timer_update_position_vac + (end_time - start_time)
         if nb_steps % initialized_values["sampling_frequency"] == 0:
             # print(
             #     "current position when sampled",
             #     initialized_values["atom_pos"].current_position_array,
             # )
+            start_time = time.time()
             initialized_values["data_collector"][
                 :, :, int(nb_steps / initialized_values["sampling_frequency"])
             ] = initialized_values["atom_pos"].current_position_array
             initialized_values["time_collector"][
                 0, int(nb_steps / initialized_values["sampling_frequency"])
             ] = initialized_values["time"]
+            end_time = time.time()
+            timer_sampling = timer_sampling + (end_time - start_time)
             # print("time recorded", initialized_values["time_collector"])
             # print(
             #     "when included in data collector",
@@ -410,4 +457,18 @@ def driver(
             #     ],
             # )
     print("Completed run")
+    print(
+        "time for the hop frequency calculator",
+        timer_hop_frequency_calculator,
+        "time for selecting the events",
+        timer_select_event,
+        "time to calculate the time step and update the time keeper",
+        timer_timestep,
+        "time for swapping the atom and vacancy",
+        timer_swap,
+        "time for updating the position of the vacancy",
+        timer_update_position_vac,
+        "time for sampling the structure",
+        timer_sampling,
+    )
     return initialized_values

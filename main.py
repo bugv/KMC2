@@ -3,11 +3,26 @@ import json
 import time
 import psutil
 
+# Ask user if create random alloy or used inputed structure
+is_random_alloy = int(
+    input(
+        "1. The exact input structure should be used \n 2. A random alloy should be create from the composition"
+    )
+)
+
 # Prompt user for input file
 file_name = input("Please enter the name of the input file: ")
 
-# load input structure from the json file
-input_data = global_functions.read_input_file(file_name)
+
+# load input structure from the json file (based on type of input)
+print(is_random_alloy)
+if is_random_alloy == 1:
+    "The exact input structure will be used"
+    input_data = global_functions.read_input_file(file_name)
+if is_random_alloy == 2:
+    input_data = global_functions.read_input_file_composition(file_name)
+if is_random_alloy != 1 and is_random_alloy != 2:
+    raise TypeError("Please select either 1 or 2 depending on the type of inputs")
 print("Input read from file")
 
 print(input_data)

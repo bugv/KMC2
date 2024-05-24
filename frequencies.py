@@ -68,7 +68,7 @@ def hop_frequency_calculator(
     neighbours = neighbour_list[:, vacancy_position]
     neighbours = np.array([x for x in neighbours if x is not None])
     freq_neighbours = np.full(len(neighbours), None)
-    for count, values in enumerate(neighbours):
+    for count, values in enumerate(neighbours):  # loops over the neighbours of the site
         freq_neighbours[count] = frequency_vect[int(occupancy_vector[int(values)])]
     sum_frequencies = np.sum(freq_neighbours)
     freq_neighbours = (np.cumsum(freq_neighbours)) / sum_frequencies
@@ -86,6 +86,24 @@ def select_event(freq_neighbours: np.array) -> int:
     """
     rho = random_number()
     return np.min(np.where(freq_neighbours > rho))
+
+
+def select_event_alternative(
+    random_array: np.array, current_step: int, freq_neighbours: np.array
+) -> int:
+    """Accelerated function to select the events (gets all of the random numbers once at the start of the driver function)
+
+    :param random_array: Array containing all of the random numbers (nb of columns  = nb of steps)
+    :type random_array: np.array
+    :param current_step: current step
+    :type current_step: int
+    :param freq_neighbours: 1D array with cumulative frequencies which range from 0 to 1
+    :type freq_neighbours: np.array
+    :return: an int corresponding to the column index of the neighbour the vacancy will switch with
+    :rtype: int
+    """
+    rho = random_array[0, current_step]
+    return np.searchsorted(freq_neighbours, rho, side="right")
 
 
 def random_number() -> float:
@@ -107,3 +125,21 @@ def time_step_calculator(frequency_sum: float) -> float:
     :rtype: float
     """
     return (-1) / (frequency_sum) * np.log(random_number())
+
+
+def time_step_calculator_alternative(
+    random_array: np.array, step: int, frequency_sum: float
+) -> float:
+    """Accelerated function to calculate the time step
+
+    :param random_aray: Array containing all of the random numbers (nb_columns = nb of time steps)
+    :type random_aray: np.array
+    :param step: Current step
+    :type step: int
+    :param frequency_sum: the sum of the frequency of all of the possible events
+    :type frequency_sum: float
+    :return: The time step for that event
+    :rtype: float
+    """
+    rand_num = random_array[1, step]
+    return (-1) / (frequency_sum) * np.log(rand_num)
