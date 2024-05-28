@@ -424,11 +424,13 @@ def driver(
         event = frequencies.select_event_alternative(
             random_array, nb_steps, freq_neighbours
         )
+        # print("event1", event)
         # print("selected event which neighbour", event)
         # select swap get index of swap site in structure
-        event = initialized_values["neighbour_array"][
-            event, initialized_values["vac_position"]
-        ]
+        # event = initialized_values["neighbour_array"][
+        #     event, initialized_values["vac_position"]
+        # ]
+        # print("event2", event)
         end_time = time.time()
         timer_select_event = timer_select_event + (end_time - start_time)
         # print("selected event actual index of neighbour", event)
@@ -452,11 +454,14 @@ def driver(
         #     initialized_values["atom_pos"].current_position_array,
         # )
         start_time = time.time()
-        initialized_values["atom_pos"].swap_displ(
-            initial=initialized_values["vac_position"], final=event
+        initialized_values["atom_pos"].swap_displ_V2(
+            initial=initialized_values["vac_position"], position_final_in_list=event
         )
         end_time = time.time()
         timer_swap = timer_swap + (end_time - start_time)
+        event = initialized_values["neighbour_array"][
+            event, initialized_values["vac_position"]
+        ]
         # print(
         #     "current position after swap",
         #     initialized_values["atom_pos"].current_position_array,

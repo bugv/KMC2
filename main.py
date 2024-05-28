@@ -3,6 +3,8 @@ import json
 import time
 import psutil
 
+total_time_start = time.time()
+
 # Ask user if create random alloy or used inputed structure
 is_random_alloy = int(
     input(
@@ -56,5 +58,9 @@ end_time = time.time()
 print("Driver function time", end_time - start_time)
 # Output results
 global_functions.write_full_to_json(results, "results.json")
+
+total_time_end = time.time()
+
+print("The total time is of ", total_time_end - total_time_start)
 
 # plot data???

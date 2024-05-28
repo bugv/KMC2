@@ -530,7 +530,6 @@ class AtomPositions:
     occupancy_vector: np.array
     current_position_array: np.array
     index_array: np.array
-    # Unsure to include the following
     neighbour_list: np.array
     equivalent_sites_in_prim: np.array
     displacement_tensor: np.array
@@ -544,13 +543,8 @@ class AtomPositions:
         :type index_b: int
         """
 
-        # input_seq[[ix1, ix2]] = input_seq[[ix2, ix1]]
-
         # update occupancy vector
         self.occupancy_vector[[i, j]] = self.occupancy_vector[[j, i]]
-        # temp_i = self.occupancy_vector[i]
-        # self.occupancy_vector[i] = self.occupancy_vector[j]
-        # self.occupancy_vector[j] = temp_i
 
         # update current_position_array
         a = np.where(self.index_array == i)
@@ -641,43 +635,105 @@ class AtomPositions:
         ]
 
         # update index array by swapping the index array values
+
+        self.index_array[[initial, final]] = self.index_array[[final, initial]]
+
+    def swap_displ_V2(
+        self,
+        initial: int,
+        position_final_in_list: int,
+    ):
+        # print("sites swaped", initial, final)
+        # get the neighbour list for the initial site
+        neighbours_of_initial = self.neighbour_list[:, initial]
+        # find where in the neighbour list the final site is
+        # np.where not ideal, but looking for an int in a small number
+        # position_final_in_list = np.where(neighbours_of_initial == final)
+        # Check site is actually a neighbour
+        final = neighbours_of_initial[position_final_in_list]
+        # if np.size(position_final_in_list) == 0:
+        #     raise ValueError("The two sites are not neighbours")
+        # Get the prim equiv for initial site
+        prim_equiv = self.equivalent_sites_in_prim[initial]
+        # get where the initial is in the index array
+        # TODO is this possible without using the np.where which is a for loop behind the scenes
+        initial_start_index = self.index_array[initial]
+        # print("pos_inital (should always be the same)", initial_start_index)
+        # get where the final is in the index array
+        final_start_index = self.index_array[final]
+        # use position in neighour list and prim equiv to get displ between initial and final
+        displ = self.displacement_tensor[:, position_final_in_list, prim_equiv]
+        # print("displ", displ)
+        # add displ to position of initial in current position array
+        # for first coord
+        self.current_position_array[0, initial_start_index] = (
+            self.current_position_array[0, initial_start_index] + displ[0]
+        )
+        # for second coord
+        self.current_position_array[1, initial_start_index] = (
+            self.current_position_array[1, initial_start_index] + displ[1]
+        )
+        # for third coord
+        self.current_position_array[2, initial_start_index] = (
+            self.current_position_array[2, initial_start_index] + displ[2]
+        )
+        # update position of final by subtracting displ from coords
+        # for first coord
+        self.current_position_array[0, final_start_index] = (
+            self.current_position_array[0, final_start_index] - displ[0]
+        )
+        # for second coord
+        self.current_position_array[1, final_start_index] = (
+            self.current_position_array[1, final_start_index] - displ[1]
+        )
+        # for third coord
+        self.current_position_array[2, final_start_index] = (
+            self.current_position_array[2, final_start_index] - displ[2]
+        )
+        # swap in occupancy vector
+        self.occupancy_vector[[initial, final]] = self.occupancy_vector[
+            [final, initial]
+        ]
+
+        # update index array by swapping the index array values
         self.index_array[[initial, final]] = self.index_array[[final, initial]]
 
         # neighbour_position_final_rel_to_initial = n  # What is this line doing
 
-    # def swap2(self, i: int, j: int):
-    #     """Method to swap the species in sites a and b of the structure
 
-    #     :param index_a: index of the first species
-    #     :type index_a: int
-    #     :param index_b: index of the second species
-    #     :type index_b: int
-    #     """
-    #     # update occupancy vector
-    #     temp_i = self.occupancy_vector[i]
-    #     self.occupancy_vector[i] = self.occupancy_vector[j]
-    #     self.occupancy_vector[j] = temp_i
+# def swap2(self, i: int, j: int):
+#     """Method to swap the species in sites a and b of the structure
 
-    #     # update current_position_array
-    #     a = np.where(self.index_array == i)
-    #     b = np.where(self.index_array == j)
+#     :param index_a: index of the first species
+#     :type index_a: int
+#     :param index_b: index of the second species
+#     :type index_b: int
+#     """
+#     # update occupancy vector
+#     temp_i = self.occupancy_vector[i]
+#     self.occupancy_vector[i] = self.occupancy_vector[j]
+#     self.occupancy_vector[j] = temp_i
 
-    #     distance = self.frac_coord_array[:a] - self.frac_coord_array[:b]
-    #     a_displacement = [0, 0, 0]
-    #     b_displacement = [0, 0, 0]
-    #     for k in range(3):
-    #         if abs(distance[k]) > 0.5:
-    #             a_displacement = (1 - abs(distance[k])) * self.lattice_vectors[:k]
-    #             b_displacement = -(1 - abs(distance[k])) * self.lattice_vectors[:k]
+#     # update current_position_array
+#     a = np.where(self.index_array == i)
+#     b = np.where(self.index_array == j)
 
-    #     self.current_position_array[:, a] = (
-    #         self.current_position_array[:, a] + a_displacement
-    #     )
-    #     self.current_position_array[:, b] = (
-    #         self.current_position_array[:, b] + b_displacement
-    #     )
+#     distance = self.frac_coord_array[:a] - self.frac_coord_array[:b]
+#     a_displacement = [0, 0, 0]
+#     b_displacement = [0, 0, 0]
+#     for k in range(3):
+#         if abs(distance[k]) > 0.5:
+#             a_displacement = (1 - abs(distance[k])) * self.lattice_vectors[:k]
+#             b_displacement = -(1 - abs(distance[k])) * self.lattice_vectors[:k]
 
-    #     # update index array
-    #     temp_i = self.index_array[i]
-    #     self.index_array[i] = self.index_array[j]
-    #     self.index_array[j] = temp_i
+#     self.current_position_array[:, a] = (
+#         self.current_position_array[:, a] + a_displacement
+#     )
+#     self.current_position_array[:, b] = (
+#         self.current_position_array[:, b] + b_displacement
+#     )
+
+#     # update index array
+#     temp_i = self.index_array[i]
+#     self.index_array[i] = self.index_array[j]
+#     self.index_array[j] = temp_i
