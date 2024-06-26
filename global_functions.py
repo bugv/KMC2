@@ -204,6 +204,8 @@ def initialization(
     end_time = time.time()
     print("Atom key builder time", end_time - start_time)
 
+    compositon_dict = structure_management.get_comp_dict(supercell, atom_key)
+
     start_time = time.time()
     process = psutil.Process()
     mem_before = process.memory_info().rss / 1024  # in kilobytes
@@ -326,6 +328,7 @@ def initialization(
         "time": 0,
         "displacement_tensor": displacements_tensor,
         "initial_vac_position": initial_vac_pos,
+        "composition_dict": compositon_dict,
     }
     # return (
     #     atom_pos,  # 0

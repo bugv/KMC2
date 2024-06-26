@@ -521,6 +521,23 @@ def get_lattice_vectors(structure: pmg.Structure) -> np.array:
     return np.vstack(lattice["matrix"]).transpose()
 
 
+def get_comp_dict(supercell: pmg.Structure, atomkey: dict) -> dict:
+    """Function to create a dict containing the composition of the supercell
+
+    :param supercell: supercell
+    :type supercell: pmg.Structure
+    :param atomkey: atom key dict created by the atom_key_builder function, should correspond to the same supercell
+    :type atomkey: dict
+    :return: Dict where the keys are the elements and the values are the atomic fraction of the element in the supercell
+    :rtype: dict
+    """
+    element_list = list(atomkey.keys())
+    comp_dict = {}
+    for element in element_list:
+        comp_dict[element] = supercell.composition.get_atomic_fraction(element)
+    return comp_dict
+
+
 @dataclass
 class AtomPositions:
     """Class to manage all the arrays that describe the position of the atoms
