@@ -20,9 +20,7 @@ from structure_management import AtomPositions
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.io.vasp import Poscar
 import json
-import time
 import copy
-import psutil
 
 
 def read_input_file(file_name: str) -> tuple:

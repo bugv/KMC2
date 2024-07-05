@@ -4,10 +4,17 @@ It contains functions to initially attribute a frequency to hops with different 
 and to calculate the frequency of given events
 
 Available functions:
-- frequency_calculator"""
+- frequency_calculator
+- standardize_frequencies
+- hop frequency_calculator
+- select_event (slow, should not be used)
+- select_event_alternative (fast, prefered version)
+- random_number
+- time_step_calcualtor (slow, should not be used)
+- time_step_calculator_alternative (fast, preered alternative)
+-"""
 
 import numpy as np
-import structure_management
 
 
 def frquency_calculator(atom_key: dict) -> np.array:
@@ -77,6 +84,7 @@ def hop_frequency_calculator(
     return freq_neighbours, sum_frequencies
 
 
+# NOTE slow version (to be avoided)
 def select_event(freq_neighbours: np.array) -> int:
     """Function to select an event from the frequency vector,
        returns the index of the neighbour with which the vacancy will switch
@@ -90,6 +98,7 @@ def select_event(freq_neighbours: np.array) -> int:
     return np.min(np.where(freq_neighbours > rho))
 
 
+# NOTE faster version (preferably use this)
 def select_event_alternative(
     random_array: np.array, current_step: int, freq_neighbours: np.array
 ) -> int:
@@ -118,6 +127,7 @@ def random_number() -> float:
     return rng.random()
 
 
+# NOTE slower as it generates the random number
 def time_step_calculator(frequency_sum: float) -> float:
     """Function to calculate the time step
 
@@ -129,6 +139,7 @@ def time_step_calculator(frequency_sum: float) -> float:
     return (-1) / (frequency_sum) * np.log(random_number())
 
 
+# NOTE faster as it takes random number in input
 def time_step_calculator_alternative(
     random_array: np.array, step: int, frequency_sum: float
 ) -> float:
