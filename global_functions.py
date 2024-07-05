@@ -4,14 +4,17 @@ It conatins functions corresponding to the initialization,
 the main body of the algorithm and the outputting of results
 
 Available functions:
--Initialization
--Driver"""
+-read_input_file
+-read_input_file_composition
+-write_full_to_json
+-write_struct_to_poscar
+-initialization
+-driver"""
 
 import structure_management
 import frequencies
-import calculators
 import numpy as np
-from pymatgen.core import Lattice, Structure
+from pymatgen.core import Structure
 import pymatgen.core as pmg
 from structure_management import AtomPositions
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
@@ -50,12 +53,12 @@ def read_input_file(file_name: str) -> tuple:
         struct = Structure(lattice, atoms, coords)
         supercell = struct * supercell_size
         return (
-            primcell,  # 0
-            supercell,  # 1
-            frequencies_dict,  # 2
-            neighbour_radius,  # 3
-            samping_frequency,  # 4
-            number_steps,  # 5
+            primcell,
+            supercell,
+            frequencies_dict,
+            neighbour_radius,
+            samping_frequency,
+            number_steps,
         )
 
 
@@ -90,16 +93,18 @@ def read_input_file_composition(file_name: str) -> tuple:
         supercell = struct * supercell_size
         supercell = structure_management.create_alloy(supercell, composition)
         return (
-            primcell,  # 0
-            supercell,  # 1
-            frequencies_dict,  # 2
-            neighbour_radius,  # 3
-            samping_frequency,  # 4
-            number_steps,  # 5
+            primcell,
+            supercell,
+            frequencies_dict,
+            neighbour_radius,
+            samping_frequency,
+            number_steps,
         )
 
 
 class NumpyEncoder(json.JSONEncoder):
+    """encoder used to manage writing numpy arrays to json files"""
+
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
@@ -107,6 +112,13 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 def write_full_to_json(full_struct: dict, file_name: str):
+    """Function to output a dict containing a full structure (AtomPosition object  and other arrays) to a json file
+
+    :param full_struct: contains AtomPosition object and other arrays
+    :type full_struct: dict
+    :param file_name: name output json file
+    :type file_name: str
+    """
     full_struct = copy.deepcopy(full_struct)
     full_struct["occupancy_vector"] = full_struct["atom_pos"].occupancy_vector
     full_struct["index_array"] = full_struct["atom_pos"].index_array
@@ -124,6 +136,13 @@ def write_full_to_json(full_struct: dict, file_name: str):
 
 
 def read_full_from_json(file_name: str) -> dict:
+    """Function to read a full structure from a json file and convert it back to the corresponding arrays/ AtomPosition object
+
+    :param file_name: name of json file
+    :type file_name: str
+    :return: Dict containing a AtomPosition object and the other arrays
+    :rtype: dict
+    """
     with open(file_name, "r") as json_file:
         full_struct = json.load(json_file)
         full_struct["atom_pos"] = AtomPositions(
@@ -192,109 +211,40 @@ def initialization(
     :rtype: tuple
     """
     supercell, initial_vac_pos = structure_management.add_vacancy_random(supercell)
-    # supercell = structure_management.add_vacancy(supercell, initial_vac_pos)
 
-    start_time = time.time()
-    process = psutil.Process()
-    mem_before = process.memory_info().rss / 1024  # in kilobytes
     atom_key = structure_management.atom_key_builder(supercell)
-    mem_after = process.memory_info().rss / 1024  # in kilobytes
-    mem_used = mem_after - mem_before
-    print("mem used for atom key builder (kilobytes)", mem_used)
-    end_time = time.time()
-    print("Atom key builder time", end_time - start_time)
 
     compositon_dict = structure_management.get_comp_dict(supercell, atom_key)
 
-    start_time = time.time()
-    process = psutil.Process()
-    mem_before = process.memory_info().rss / 1024  # in kilobytes
     occupancy_vector = structure_management.occupancy_vector_builder(
         supercell, atom_key
     )
-    mem_after = process.memory_info().rss / 1024  # in kilobytes
-    mem_used = mem_after - mem_before
-    print("mem used for occupancy vector builder(kilobytes)", mem_used)
-    end_time = time.time()
-    print("Occupancy vector builder time", end_time - start_time)
 
-    start_time = time.time()
-    process = psutil.Process()
-    mem_before = process.memory_info().rss / 1024  # in kilobytes
     equivalent_sites_array = structure_management.get_equiv_in_primative(
         primcell, supercell
     )
-    mem_after = process.memory_info().rss / 1024  # in kilobytes
-    mem_used = mem_after - mem_before
-    print("mem used for get equiv in primative (kilobytes)", mem_used)
-    end_time = time.time()
-    print("Get equivalent in prim time", end_time - start_time)
 
-    start_time = time.time()
-    process = psutil.Process()
-    mem_before = process.memory_info().rss / 1024  # in kilobytes
     displacements_tensor = structure_management.get_displacement_tensor(
         primcell, supercell, radius
     )
-    mem_after = process.memory_info().rss / 1024  # in kilobytes
-    mem_used = mem_after - mem_before
-    print("mem used for get displacements (kilobytes)", mem_used)
-    end_time = time.time()
-    print("get displacement tensor time", end_time - start_time)
 
-    start_time = time.time()
-    process = psutil.Process()
-    mem_before = process.memory_info().rss / 1024  # in kilobytes
     neighour_array = structure_management.alternate_neighbour_finder(
         supercell,
         radius,
     )
-    mem_after = process.memory_info().rss / 1024  # in kilobytes
-    mem_used = mem_after - mem_before
-    print("mem used for get neighbours (kilobytes)", mem_used)
-    end_time = time.time()
-    print("Get neighbour array time", end_time - start_time)
 
-    start_time = time.time()
-    process = psutil.Process()
-    mem_before = process.memory_info().rss / 1024  # in kilobytes
     frequency_vector = frequencies.standardize_frequencies(user_frequencies, atom_key)
     current_position_array = structure_management.current_position_array_builder(
         supercell
     )
-    mem_after = process.memory_info().rss / 1024  # in kilobytes
-    mem_used = mem_after - mem_before
-    print("mem used for get freq vect (kilobytes)", mem_used)
-    end_time = time.time()
-    print("Get frequency vect time", end_time - start_time)
 
-    start_time = time.time()
-    process = psutil.Process()
-    mem_before = process.memory_info().rss / 1024  # in kilobytes
     data_collector = structure_management.data_collector_builder(
         supercell, sampling_frequency, total_nb_steps
     )
-    mem_after = process.memory_info().rss / 1024  # in kilobytes
-    mem_used = mem_after - mem_before
-    print("mem used for build data collector (kilobytes)", mem_used)
-    end_time = time.time()
-    print("build data collector time", end_time - start_time)
 
-    mem_before = process.memory_info().rss / 1024  # in kilobytes
     index_array = structure_management.index_vector_builder(supercell)
 
-    end_time = time.time()
-    print("index vector builder time", end_time - start_time)
-
-    start_time = time.time()
-    process = psutil.Process()
-    mem_before = process.memory_info().rss / 1024  # in kilobytes
     vac_position = structure_management.find_vac(occupancy_vector, atom_key)
-    mem_after = process.memory_info().rss / 1024  # in kilobytes
-    mem_used = mem_after - mem_before
-    print("mem used for find vac (kilobytes)", mem_used)
-    end_time = time.time()
-    print("get vac pos time", end_time - start_time)
 
     atom_pos = AtomPositions(
         occupancy_vector,
@@ -305,15 +255,13 @@ def initialization(
         displacements_tensor,
     )
 
-    start_time = time.time()
     time_collector = structure_management.time_collector_builder(
         sampling_frequency, total_nb_steps
     )
-    end_time = time.time()
-    print("time collector builder time", end_time - start_time)
-    print("Completed Initialization")
 
     write_struct_to_poscar(supercell)
+    print("Completed Initialization")
+
     return {
         "atom_pos": atom_pos,
         "atom_key": atom_key,
@@ -330,22 +278,6 @@ def initialization(
         "initial_vac_position": initial_vac_pos,
         "composition_dict": compositon_dict,
     }
-    # return (
-    #     atom_pos,  # 0
-    #     atom_key,  # 1
-    #     neighour_array,  # 2
-    #     frequency_vector,  # 3
-    #     data_collector,  # 4
-    #     total_nb_steps,  # 5
-    #     sampling_frequency,  # 6
-    #     vac_position,  # 7
-    # )
-
-
-##Driver function
-# This function implements the loop in the algorithm, it takes as input functions corresponding to different steps
-# Input:  tuple from the initialize function, hop_frequency_calculator function, random_number_generator function, acceptor function
-# Output:
 
 
 def driver(
@@ -358,17 +290,10 @@ def driver(
     :return: data collector array
     :rtype: np.array
     """
-    vac_position = initialized_values["vac_position"]
-    data_collector = initialized_values["data_collector"]
-    atom_pos = initialized_values["atom_pos"]
-    # loop for number of steps required
-    start_time = time.time()
-    random_array = np.random.random((2, initialized_values["total_nb_steps"]))
-    end_time = time.time()
-    print("time needed to create an array of random numbers", end_time - start_time)
 
-    ### Try to accelerate the hop frequency calculator by calculating once if all frequencies are the same
-    # Check if frequencies are the same
+    random_array = np.random.random((2, initialized_values["total_nb_steps"]))
+
+    ### Accelerate if the frequencies are the same
     frequency_vect = initialized_values["frequency_vector"].astype(float)
     equal_freqs = np.allclose(
         frequency_vect[:-1],
@@ -383,29 +308,11 @@ def driver(
             initialized_values["neighbour_array"],
             initialized_values["frequency_vector"],
         )
-    # if yes -> calculate frequencies once, set a variable to true
-    # if no -> set the variale to false
+    # if yes -> calculate frequencies once, set a variable to true (fast)
+    # if no -> set the variale to false (slower)
 
-    ### End of modifications to accelerate the hop frequencies
-
-    ## temp variables created to track run times
-    timer_hop_frequency_calculator = 0
-    timer_select_event = 0
-    timer_timestep = 0
-    timer_swap = 0
-    timer_update_position_vac = 0
-    timer_sampling = 0
-    ## end of temp variable definition
     for nb_steps in range(0, initialized_values["total_nb_steps"]):
-        # get the frequencies of a swap with the neighbours of the vacancy
 
-        start_time = time.time()
-        # freq_neighbours, sum_freq = frequencies.hop_frequency_calculator(
-        #     initialized_values["vac_position"],
-        #     initialized_values["atom_pos"].occupancy_vector,
-        #     initialized_values["neighbour_array"],
-        #     initialized_values["frequency_vector"],
-        # )
         if not equal_freqs:
             freq_neighbours, sum_freq = frequencies.hop_frequency_calculator(
                 initialized_values["vac_position"],
@@ -413,102 +320,33 @@ def driver(
                 initialized_values["neighbour_array"],
                 initialized_values["frequency_vector"],
             )
-        ### Alternate version which is faster is all frequencies are the same
 
-        ### End Alternate version which is faster if all frequencies are the same
-        end_time = time.time()
-        timer_hop_frequency_calculator = timer_hop_frequency_calculator + (
-            end_time - start_time
-        )
-
-        # select the swap -> index of neighbour with which vacancy will switch
-        start_time = time.time()
-        # event = frequencies.select_event(freq_neighbours)
         event = frequencies.select_event_alternative(
             random_array, nb_steps, freq_neighbours
         )
-        # print("event1", event)
-        # print("selected event which neighbour", event)
-        # select swap get index of swap site in structure
-        # event = initialized_values["neighbour_array"][
-        #     event, initialized_values["vac_position"]
-        # ]
-        # print("event2", event)
-        end_time = time.time()
-        timer_select_event = timer_select_event + (end_time - start_time)
-        # print("selected event actual index of neighbour", event)
-        # update time
-
-        start_time = time.time()
-        # initialized_values["time"] = initialized_values[
-        #     "time"
-        # ] + frequencies.time_step_calculator(sum_freq)
 
         initialized_values["time"] = initialized_values[
             "time"
         ] + frequencies.time_step_calculator_alternative(
             random_array, nb_steps, sum_freq
         )
-        end_time = time.time()
-        timer_timestep = timer_timestep + (end_time - start_time)
-        # swap
-        # print(
-        #     "current position before swap",
-        #     initialized_values["atom_pos"].current_position_array,
-        # )
-        start_time = time.time()
+
         initialized_values["atom_pos"].swap_displ_V2(
             initial=initialized_values["vac_position"], position_final_in_list=event
         )
-        end_time = time.time()
-        timer_swap = timer_swap + (end_time - start_time)
         event = initialized_values["neighbour_array"][
             event, initialized_values["vac_position"]
         ]
-        # print(
-        #     "current position after swap",
-        #     initialized_values["atom_pos"].current_position_array,
-        # )
-        # update vacancy position
 
-        start_time = time.time()
         initialized_values["vac_position"] = event
-        end_time = time.time()
-        timer_update_position_vac = timer_update_position_vac + (end_time - start_time)
         if nb_steps % initialized_values["sampling_frequency"] == 0:
-            # print(
-            #     "current position when sampled",
-            #     initialized_values["atom_pos"].current_position_array,
-            # )
-            start_time = time.time()
+
             initialized_values["data_collector"][
                 :, :, int(nb_steps / initialized_values["sampling_frequency"])
             ] = initialized_values["atom_pos"].current_position_array
             initialized_values["time_collector"][
                 0, int(nb_steps / initialized_values["sampling_frequency"])
             ] = initialized_values["time"]
-            end_time = time.time()
-            timer_sampling = timer_sampling + (end_time - start_time)
-            # print("time recorded", initialized_values["time_collector"])
-            # print(
-            #     "when included in data collector",
-            #     initialized_values["data_collector"][
-            #         :, :, int(nb_steps / initialized_values["sampling_frequency"])
-            #     ],
-            # )
+
     print("Completed run")
-    print(
-        "time for the hop frequency calculator",
-        timer_hop_frequency_calculator,
-        "time for selecting the events",
-        timer_select_event,
-        "time to calculate the time step and update the time keeper",
-        timer_timestep,
-        "time for swapping the atom and vacancy",
-        timer_swap,
-        "time for updating the position of the vacancy",
-        timer_update_position_vac,
-        "time for sampling the structure",
-        timer_sampling,
-    )
     return initialized_values
