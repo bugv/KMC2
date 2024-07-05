@@ -5,10 +5,15 @@ and to modify these arrays.
 
 Available functions:
 - occupancy_vector_builder
+- add_vacancy
+- add_vacancy_random
+- create_alloy
 - atom_key_bulider
 - empty_structure
 - get_equiv_in_primative
 - get_neighbour_from_displ
+- alternate_neighbour_finder
+- get_displ_one_site
 - get_displacement_tensor
 - get_max_nb_neighbours
 - neighbour_finder (avoid this as order of neighbours is unknown)
@@ -17,6 +22,10 @@ Available functions:
 - time_colector_builder
 - index_vector_builder
 - find_vac
+- get lattice_vectors
+- get_comp_dict
+
+Class: AtomPositions
 
 Available class: AtomPositions
 """
@@ -24,8 +33,6 @@ Available class: AtomPositions
 import numpy as np
 import pymatgen.core as pmg
 from dataclasses import dataclass
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-import psutil
 
 
 def occupancy_vector_builder(structure: pmg.Structure, atom_key: dict) -> np.array:
@@ -68,17 +75,11 @@ def add_vacancy_random(structure: pmg.Structure) -> tuple:
     :return: supercell with vacancy added and an int corresponding to the position of the vacancy
     :rtype: tuple
     """
-    # Get number of sites in the structure
     num_sites = structure.num_sites
-    # get random number between 0 and the number of sites in the structure -1
     rng = np.random.default_rng()
     vacancy_position = int(np.floor(rng.random() * num_sites))
-    # random between 0 and 1
-    # get random int -> get random 0 to 1, multiply by max value, get the floor
     structure[vacancy_position] = pmg.DummySpecies("X")
     return structure, vacancy_position
-    # add vacancy at that position
-    # return the structure
 
 
 def create_alloy(structure: pmg.Structure, composition: dict) -> pmg.Structure:
@@ -178,10 +179,6 @@ def get_equiv_in_primative(
                 )
             if equivalent_sites_array[i] is None and is_equiv:
                 equivalent_sites_array[i] = j
-    # if np.any(equivalent_sites_array, None) != 1:
-    #     print("check equivalent sites array", equivalent_sites_array)
-    #     print("test condition", np.any(equivalent_sites_array, None))
-    #     raise ValueError("one or more sites has no equivalent in the primitive cell")
     return equivalent_sites_array
 
 
@@ -205,25 +202,17 @@ def get_neighbours_from_displ(
     :return: neighbour array, where each column contains the neighbours of the atom at that index
     :rtype: np.array
     """
-    structure = empty_structure(structure)  # ok (not in loop)
+    structure = empty_structure(structure)
     neighbours_array = np.full(
         (get_max_nb_neighbours(structure, radius), structure.num_sites), None
-    )  # ok (not in loop)
-    coords_array = structure.cart_coords  # ok (not in loop)
-    sites_list = structure.sites  # ok (not in loop)
-    process2 = psutil.Process()
-    mem_initial = process2.memory_info().rss / 1024
-    for center_index, center_site in enumerate(
-        coords_array
-    ):  # loop over sites, necessary
-        process = psutil.Process()  # memory monitoring
-        mem_before = process.memory_info().rss / 1024  # in kilobytes #memory monitoring
-        prim_equiv = equivalent_sites_array[center_index]  # Creates a reference
-        displacements = disp_tensor[:, :, prim_equiv]  # creates a reference
-        for nb_neighbour, displ in enumerate(
-            np.transpose(displacements)
-        ):  # loop over the neighbours of the site, necessary
-            if np.all(displ != None):  # test not memory use
+    )
+    coords_array = structure.cart_coords
+    sites_list = structure.sites
+    for center_index, center_site in enumerate(coords_array):
+        prim_equiv = equivalent_sites_array[center_index]
+        displacements = disp_tensor[:, :, prim_equiv]
+        for nb_neighbour, displ in enumerate(np.transpose(displacements)):
+            if np.all(displ != None):
                 new_frac_coords = np.mod(
                     np.round(
                         np.array(
@@ -235,17 +224,15 @@ def get_neighbours_from_displ(
                         6,
                     ),
                     1,
-                )  # creating an array -> new memory allocated -> might be the problem
+                )
                 new_site = pmg.PeriodicSite(
                     species="X",
                     coords=np.mod(new_frac_coords, 1),
                     lattice=structure.lattice,
                     to_unit_cell=True,
                     coords_are_cartesian=False,
-                )  # creating a site -> new memory allocated -> might be a problem??
-                index = (
-                    -1
-                )  # create an int -> new memory allocated -> should not be a problem
+                )
+                index = -1
                 for site in structure:
                     test_dist = site.distance(new_site) <= 1e-4
                     if test_dist:
@@ -253,21 +240,7 @@ def get_neighbours_from_displ(
                         break
                 if index == -1:
                     raise ValueError("neighbour not found with alternative method")
-                neighbours_array[nb_neighbour, center_index] = (
-                    index  # change value in the array -> no new memory allocated -> should not be a problem?
-                )
-        mem_after = process.memory_info().rss / 1024  # in kilobytes #memory monitoring
-        mem_used = mem_after - mem_before  # memory monitoring
-        # print(
-        #     "mem used for one loop neighbour finder, all neighbours one atom (kilobytes)",
-        #     mem_used,
-        # )
-        total_mem_so_far = process2.memory_info().rss / 1024
-        # print(
-        #     "Total memory used up to this step in neighbour finder",
-        #     total_mem_so_far - mem_initial,
-        # )
-
+                neighbours_array[nb_neighbour, center_index] = index
     return neighbours_array
 
 
@@ -285,8 +258,8 @@ def alternate_neighbour_finder(supercell: pmg.Structure, radius: float) -> np.ar
     nb_sites = supercell.num_sites
     neighbour_array = np.full((max_nb_neighbours, nb_sites), None)
     csites, nsites, offsets, dists = supercell.get_neighbor_list(radius)
-    cart_nsites = np.array([supercell.sites[i].coords for i in nsites])  # loop
-    cart_csites = np.array([supercell.sites[i].coords for i in csites])  # loop
+    cart_nsites = np.array([supercell.sites[i].coords for i in nsites])
+    cart_csites = np.array([supercell.sites[i].coords for i in csites])
     lattice = get_lattice_vectors(supercell).transpose()
     displs = cart_nsites - cart_csites + offsets @ lattice
     sorter = np.lexsort(
@@ -375,18 +348,13 @@ def get_displacement_tensor(
         neighbour_coords = neighbour_coords + offset @ lattice
         displ = neighbour_coords - primitive[center].coords
         displ_vect_tensor[:, int(index_list[count_center]), center] = displ
-    # transpose array to apply lex sort
     displ_vect_tensor = np.transpose(displ_vect_tensor, (1, 0, 2))
-    # lex sort, need to split array into layers and sort each layer individually
-    # create empty array that has the same shape as the
     sorted_displ_tensor = np.empty_like(displ_vect_tensor)
     for i in range(np.shape(sorted_displ_tensor)[2]):
         layer = displ_vect_tensor[:, :, i]
         sorter = np.lexsort((layer[:, 2], layer[:, 1], layer[:, 0]))
         sorted_displ_tensor[:, :, i] = layer[sorter]
     sorted_displ_tensor = np.transpose(sorted_displ_tensor, (1, 0, 2))
-    # transpose array back to initial shape
-
     return sorted_displ_tensor
 
 
@@ -560,98 +528,50 @@ class AtomPositions:
         :type index_b: int
         """
 
-        # update occupancy vector
         self.occupancy_vector[[i, j]] = self.occupancy_vector[[j, i]]
-
-        # update current_position_array
         a = np.where(self.index_array == i)
         b = np.where(self.index_array == j)
         temp_a = np.copy(self.current_position_array[:, a])
         self.current_position_array[:, a] = self.current_position_array[:, b]
         self.current_position_array[:, b] = temp_a
-
-        # update index array
         temp_i = self.index_array[i]
         self.index_array[i] = self.index_array[j]
         self.index_array[j] = temp_i
 
-    # New  swap including the displacement vectors
-    # Input: indices of the two atoms/things to swap, list of equivelanet sites in primitive,
-    #        displacement vector tensor
-    # Output: nothing, modifies the atom position object
-    # update the positions using the displacements vectors
-    # for the first site, look through the neighbour list to get which vertical index the second site is at
-    # Get wich primitive site the first site is equivalent to
-    # get the displacement vector
-    # add the diplacemnt vector to the current position of the atom1
-    # subtract the displacement vector to the current position of atom 2
-    # update the occupancy vector (swap the )
-    # update the index array
-    ## Question: should the atoms position object contain the list of equivalent sites in the primitive
-    # and the displacement vectors and the neighbours list
-    # Pro: call swap only acts on self (no need to input displacements...),
-    #       lower risk of copying more than necessary
-    # Con: Not really part of the atoms positions
-
-    # Should it contain a check that the two sites are actually neighbours
-    # Has to contain it because update position is based on them being neighbours
     def swap_displ(
         self,
         initial: int,
         final: int,
     ):
-        # print("sites swaped", initial, final)
-        # get the neighbour list for the initial site
         neighbours_of_initial = self.neighbour_list[:, initial]
-        # find where in the neighbour list the final site is
-        # np.where not ideal, but looking for an int in a small number
         position_final_in_list = np.where(neighbours_of_initial == final)
-        # Check site is actually a neighbour
         if np.size(position_final_in_list) == 0:
             raise ValueError("The two sites are not neighbours")
-        # Get the prim equiv for initial site
         prim_equiv = self.equivalent_sites_in_prim[initial]
-        # get where the initial is in the index array
-        # TODO is this possible without using the np.where which is a for loop behind the scenes
         initial_start_index = self.index_array[initial]
-        # print("pos_inital (should always be the same)", initial_start_index)
-        # get where the final is in the index array
         final_start_index = self.index_array[final]
-        # use position in neighour list and prim equiv to get displ between initial and final
         displ = self.displacement_tensor[:, position_final_in_list, prim_equiv]
-        # print("displ", displ)
-        # add displ to position of initial in current position array
-        # for first coord
         self.current_position_array[0, initial_start_index] = (
             self.current_position_array[0, initial_start_index] + displ[0]
         )
-        # for second coord
         self.current_position_array[1, initial_start_index] = (
             self.current_position_array[1, initial_start_index] + displ[1]
         )
-        # for third coord
         self.current_position_array[2, initial_start_index] = (
             self.current_position_array[2, initial_start_index] + displ[2]
         )
-        # update position of final by subtracting displ from coords
-        # for first coord
         self.current_position_array[0, final_start_index] = (
             self.current_position_array[0, final_start_index] - displ[0]
         )
-        # for second coord
         self.current_position_array[1, final_start_index] = (
             self.current_position_array[1, final_start_index] - displ[1]
         )
-        # for third coord
         self.current_position_array[2, final_start_index] = (
             self.current_position_array[2, final_start_index] - displ[2]
         )
-        # swap in occupancy vector
         self.occupancy_vector[[initial, final]] = self.occupancy_vector[
             [final, initial]
         ]
-
-        # update index array by swapping the index array values
 
         self.index_array[[initial, final]] = self.index_array[[final, initial]]
 
@@ -660,97 +580,31 @@ class AtomPositions:
         initial: int,
         position_final_in_list: int,
     ):
-        # print("sites swaped", initial, final)
-        # get the neighbour list for the initial site
         neighbours_of_initial = self.neighbour_list[:, initial]
-        # find where in the neighbour list the final site is
-        # np.where not ideal, but looking for an int in a small number
-        # position_final_in_list = np.where(neighbours_of_initial == final)
-        # Check site is actually a neighbour
         final = neighbours_of_initial[position_final_in_list]
-        # if np.size(position_final_in_list) == 0:
-        #     raise ValueError("The two sites are not neighbours")
-        # Get the prim equiv for initial site
         prim_equiv = self.equivalent_sites_in_prim[initial]
-        # get where the initial is in the index array
-        # TODO is this possible without using the np.where which is a for loop behind the scenes
         initial_start_index = self.index_array[initial]
-        # print("pos_inital (should always be the same)", initial_start_index)
-        # get where the final is in the index array
         final_start_index = self.index_array[final]
-        # use position in neighour list and prim equiv to get displ between initial and final
         displ = self.displacement_tensor[:, position_final_in_list, prim_equiv]
-        # print("displ", displ)
-        # add displ to position of initial in current position array
-        # for first coord
         self.current_position_array[0, initial_start_index] = (
             self.current_position_array[0, initial_start_index] + displ[0]
         )
-        # for second coord
         self.current_position_array[1, initial_start_index] = (
             self.current_position_array[1, initial_start_index] + displ[1]
         )
-        # for third coord
         self.current_position_array[2, initial_start_index] = (
             self.current_position_array[2, initial_start_index] + displ[2]
         )
-        # update position of final by subtracting displ from coords
-        # for first coord
         self.current_position_array[0, final_start_index] = (
             self.current_position_array[0, final_start_index] - displ[0]
         )
-        # for second coord
         self.current_position_array[1, final_start_index] = (
             self.current_position_array[1, final_start_index] - displ[1]
         )
-        # for third coord
         self.current_position_array[2, final_start_index] = (
             self.current_position_array[2, final_start_index] - displ[2]
         )
-        # swap in occupancy vector
         self.occupancy_vector[[initial, final]] = self.occupancy_vector[
             [final, initial]
         ]
-
-        # update index array by swapping the index array values
         self.index_array[[initial, final]] = self.index_array[[final, initial]]
-
-        # neighbour_position_final_rel_to_initial = n  # What is this line doing
-
-
-# def swap2(self, i: int, j: int):
-#     """Method to swap the species in sites a and b of the structure
-
-#     :param index_a: index of the first species
-#     :type index_a: int
-#     :param index_b: index of the second species
-#     :type index_b: int
-#     """
-#     # update occupancy vector
-#     temp_i = self.occupancy_vector[i]
-#     self.occupancy_vector[i] = self.occupancy_vector[j]
-#     self.occupancy_vector[j] = temp_i
-
-#     # update current_position_array
-#     a = np.where(self.index_array == i)
-#     b = np.where(self.index_array == j)
-
-#     distance = self.frac_coord_array[:a] - self.frac_coord_array[:b]
-#     a_displacement = [0, 0, 0]
-#     b_displacement = [0, 0, 0]
-#     for k in range(3):
-#         if abs(distance[k]) > 0.5:
-#             a_displacement = (1 - abs(distance[k])) * self.lattice_vectors[:k]
-#             b_displacement = -(1 - abs(distance[k])) * self.lattice_vectors[:k]
-
-#     self.current_position_array[:, a] = (
-#         self.current_position_array[:, a] + a_displacement
-#     )
-#     self.current_position_array[:, b] = (
-#         self.current_position_array[:, b] + b_displacement
-#     )
-
-#     # update index array
-#     temp_i = self.index_array[i]
-#     self.index_array[i] = self.index_array[j]
-#     self.index_array[j] = temp_i
