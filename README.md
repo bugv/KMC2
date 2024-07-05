@@ -2,7 +2,7 @@
 
 This library provides the diffusion of a single vacancy in an alloy using the kinetic Monte Carlo algorithm. 
 
-Written by Zoë Evans (zoe.evans@epfl.ch) in a Spring 2024 Semester Project
+Written by Zoë Evans (zoe.evans@epfl.ch) in a Spring 2024 Semester Project at the MADES EPFL lab.
 
 ## Table of Contents
 
@@ -13,9 +13,9 @@ Written by Zoë Evans (zoe.evans@epfl.ch) in a Spring 2024 Semester Project
 
 This code was developed in python 3.10.
 
-It requires the following libraries are needed:
+It requires the following libraries:
 
-- matplotlin
+- matplotlib
 - numpy
 - pandas
 - pymatgen
@@ -55,3 +55,4 @@ This will produce the following files :
 
 - an initialize structure json file for each concentration
 - a results.dat file containing the L_ij parameters for each concentration
+- a plot of the L_ij values as a function of the concentration
