@@ -169,14 +169,14 @@ def read_full_from_json(file_name: str) -> dict:
     return full_struct
 
 
-def write_struct_to_poscar(structure: pmg.Structure) -> None:
+def write_struct_to_poscar(structure: pmg.Structure,poscar_path = "POSCAR") -> None:
     """Function to write a pymatgen structure as a POSCAR file. The output will have the name "POSCAR"
 
     :param structure: the structure to write to the file
     :type structure: pmg.Structure
     """
     structure_as_poscar = Poscar(structure, sort_structure=True)
-    structure_as_poscar.write_file("POSCAR")
+    structure_as_poscar.write_file(poscar_path)
 
 
 def initialization(
@@ -186,6 +186,7 @@ def initialization(
     radius: float,
     sampling_frequency: float,
     total_nb_steps: int,
+    poscar_path = "POSCAR",
 ) -> tuple:
     """Function that runs all of the steps of the initialization and writes the initial supercell to a POSCAR file
 
@@ -257,7 +258,7 @@ def initialization(
         sampling_frequency, total_nb_steps
     )
 
-    write_struct_to_poscar(supercell)
+    write_struct_to_poscar(supercell,poscar_path)
     print("Completed Initialization")
 
     return {

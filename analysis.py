@@ -28,9 +28,17 @@ def calculate_L_ij(
     data_j = data_j * 1e-8  # convert to cm
     data_i = data_i * 1e-8  # convert to cm
 
+    print(data_j[:,25,::100])
+    for i in range(data_i.shape[1]):
+        plt.plot(data_i[0,i,:],data_i[1,i,:],)
+        plt.text(np.min(data_i[0,i,:]),np.min(data_i[1,i,:]),str(i))
+    plt.show()
+
+    #print(np.max(data_i,axis=2))
+
     for site in range(data_i.shape[1]):
         for time_step in range(data_i.shape[2]):
-            displ = np.sqrt(
+            displ = np.sqrt( #why square + sqrt ????
                 (
                     (data_i[0, site, time_step] - data_i[0, site, 0]) ** 2
                     + (data_i[1, site, time_step] - data_i[1, site, 0]) ** 2
@@ -50,10 +58,18 @@ def calculate_L_ij(
             )
             displs_array_j[time_step, site] = displ
 
-    displs_per_time_i = np.sum(displs_array_i, axis=1)
+    displs_per_time_i = np.sum(displs_array_i, axis=1) 
     displs_per_time_j = np.sum(displs_array_j, axis=1)
 
-    mds = (displs_per_time_i * displs_per_time_j) / (nb_sites**2)
+    mds = (displs_per_time_i * displs_per_time_j) / (nb_sites**2) 
+    
+    #why divide by nb_sites**2 ????
+
+    plt.plot(displs_array_j[:,0] * 1e8)
+    plt.plot(displs_array_j[:,25] * 1e8)
+    plt.plot(displs_array_j[:,50] * 1e8)
+    plt.plot(displs_array_j[:,75] * 1e8)
+    plt.show()
     mds = np.array(mds, dtype=float)
     linevalues = stats.linregress(time_collector[0, :], mds)
     slope, intercept, r_value, p_value, std_err = linevalues
@@ -65,8 +81,96 @@ def calculate_L_ij(
         atom_type_j,
     )
 
-    L_ij_plot(time_collector, linevalues, mds, atom_type_i, atom_type_j, filename)
+    #L_ij_plot(time_collector, linevalues, mds, atom_type_i, atom_type_j, filename)
     return slope / 6
+
+def calculate_L_ij_v2(
+    atom_type_i: str,
+    atom_type_j: str,
+    data_i: np.array,
+    data_j: np.array,
+    time_collector: np.array,
+    nb_sites: int,
+    filename: str,
+) -> float:
+    nb_site_i = np.shape(data_i)[1]
+    nb_site_j = np.shape(data_j)[1]
+    displs_array_i = np.full((np.shape(data_i)[2], np.shape(data_i)[1],3), None)
+    displs_array_j = np.full((np.shape(data_j)[2], np.shape(data_j)[1],3), None)
+    data_j = data_j * 1e-8  # convert to cm
+    data_i = data_i * 1e-8  # convert to cm
+
+    for i in range(data_i.shape[1]):
+        plt.plot(data_i[0,i,:],data_i[1,i,:],)
+        plt.text(np.min(data_i[0,i,:]),np.min(data_i[1,i,:]),str(i))
+    plt.title("data_i")
+    plt.show()
+
+    for i in range(data_j.shape[1]):
+        plt.plot(data_j[0,i,:],data_j[1,i,:],)
+        plt.text(np.min(data_j[0,i,:]),np.min(data_j[1,i,:]),str(i))
+    plt.title("data_j")
+    plt.show()
+
+    for site in range(data_i.shape[1]):
+        for time_step in range(data_i.shape[2]):  
+            displs_array_i[time_step, site, 0] = data_i[0, site, time_step] - data_i[0, site, 0]
+            displs_array_i[time_step, site, 1] = data_i[1, site, time_step] - data_i[1, site, 0]
+            displs_array_i[time_step, site, 2] = data_i[2, site, time_step] - data_i[2, site, 0]
+
+    for site in range(data_j.shape[1]):
+        for time_step in range(data_j.shape[2]):
+            displs_array_j[time_step, site, 0] = data_j[0, site, time_step] - data_j[0, site, 0]
+            displs_array_j[time_step, site, 1] = data_j[1, site, time_step] - data_j[1, site, 0]
+            displs_array_j[time_step, site, 2] = data_j[2, site, time_step] - data_j[2, site, 0]
+
+    displs_per_time_i = np.sum(displs_array_i, axis=1)
+    displs_per_time_j = np.sum(displs_array_j, axis=1)
+
+    mds = np.einsum('ij,ij->i', displs_per_time_i, displs_per_time_j) / nb_sites # dot product over coordinates for every time
+
+    print(np.max(displs_array_j[-1,:,0]))
+    
+    sames_i = []
+    for site in range(data_i.shape[1]):
+        plt.plot((displs_array_i[:,site,0]**2 + displs_array_i[:,site,1]**2 + displs_array_i[:,site,2]**2),linewidth=1,alpha=0.5)
+        sames_i.append((displs_array_i[:,site,0]**2 + displs_array_i[:,site,1]**2 + displs_array_i[:,site,2]**2))
+    sames_i = np.array(sames_i)
+    plt.ylabel("Delta R^i_zeta (t)^2 [A^2]")
+    plt.show()
+
+    #for site_zeta in range(data_i.shape[1]):
+    #     for site_xi in range(data_j.shape[1]):
+    #         if site_zeta != site_xi:
+    #             plt.plot(np.einsum('ij,ij->i', displs_array_i[:,site_zeta,:], displs_array_j[:,site_xi,:]),linewidth=1,alpha=0.1)
+    # plt.savefig("cross_term_ij.png",dpi=600)
+
+    # crosses = []
+    # for site_zeta in range(data_i.shape[1]):
+    #     for site_xi in range(data_j.shape[1]):
+    #         if site_zeta != site_xi:
+    #             crosses.append(np.einsum('ij,ij->i', displs_array_i[:,site_zeta,:], displs_array_j[:,site_xi,:]))
+
+    # crosses = np.array(crosses)
+    # plt.plot(np.sum(crosses,axis=0))
+    # plt.plot(np.sum(sames_i,axis=0))
+    # plt.show()
+
+
+    mds = np.array(mds, dtype=float)
+    linevalues = stats.linregress(time_collector[0, :], mds)
+    slope, intercept, r_value, p_value, std_err = linevalues
+
+    print(
+        f"L_{atom_type_i}{atom_type_j}_tilde [cm2/s]",
+        slope / (6),
+        atom_type_i,
+        atom_type_j,
+    )
+
+    #L_ij_plot(time_collector, linevalues, mds, atom_type_i, atom_type_j, filename)
+    return slope / 6
+
 
 
 def L_ij_plot(
@@ -98,8 +202,15 @@ def L_ij_plot(
     plt.ylabel("mean square displacement [cm^2]")
     plt.grid()
     plt.legend()
+
+    # plt.yscale("log")
+    # plt.xscale("log")
+    # x = np.linspace(1e-7,7e-5,10)
+    # plt.plot(x, x**2)
+    # plt.xlim(1e-7)
+
     # plt.savefig(filename)
-    # plt.show()
+    plt.show()
 
 
 all_data = global_functions.read_full_from_json("results.json")
@@ -118,10 +229,40 @@ print(np.shape(indices_0))
 print(np.shape(indices_1))
 print(np.shape(indices_2))
 
-
 data_collector_0 = all_data_collector[:, indices_0, :]
 data_collector_1 = all_data_collector[:, indices_1, :]
 data_collector_2 = all_data_collector[:, indices_2, :]
+
+print(data_collector_0[:,51,0])
+print(data_collector_0[:,51,1])
+
+print(data_collector_2[:,0,0])
+print(data_collector_2[:,0,1])
+
+for i in range(data_collector_0.shape[1]):
+    plt.plot(data_collector_0[0,i,:],data_collector_0[1,i,:],)
+    plt.text(np.min(data_collector_0[0,i,:]),np.min(data_collector_0[1,i,:]),str(i))
+plt.title("data_i")
+plt.show()
+
+displs_array_2 = np.full((np.shape(data_collector_2)[2], np.shape(data_collector_2)[1],3), None)
+for time_step in range(data_collector_2.shape[2]):
+    displs_array_2[time_step, 0, 0] = data_collector_2[0, 0, time_step] - data_collector_2[0, 0, 0]
+    displs_array_2[time_step, 0, 1] = data_collector_2[1, 0,time_step] - data_collector_2[1, 0, 0]
+    displs_array_2[time_step, 0, 2] = data_collector_2[2, 0, time_step] - data_collector_2[2, 0, 0]
+
+sd = np.sum(displs_array_2 ** 2, axis=2)
+plt.plot(sd)
+plt.ylabel("vacancy msd")
+plt.show()
+
+#plot how the vacancy moves
+plt.scatter(data_collector_2[0,0,:] * 1e-8,data_collector_2[1,0,:] * 1e-8,c=range(data_collector_2.shape[2]),cmap="turbo",s=1)
+
+# plt.scatter(data_collector_0[0,50,:] * 1e-8,data_collector_0[1,50,:] * 1e-8,c=range(data_collector_0.shape[2]),cmap="turbo",marker="x")
+
+plt.show()
+
 
 
 for key, value in all_data["atom_key"].items():
@@ -142,28 +283,27 @@ for key, value in all_data["atom_key"].items():
         comp_2 = all_data["composition_dict"][key]
 
 
-L_00 = calculate_L_ij(
-    elem_0,
-    elem_0,
-    data_collector_0,
-    data_collector_0,
-    time_collector,
-    nb_sites,
-    f"results/plot_L{elem_0}{elem_0}_comp_{elem_0}{comp_0}_{elem_1}{comp_1}.png",
-)
+# L_00 = calculate_L_ij_v2(
+#     elem_0,
+#     elem_0,
+#     data_collector_0,
+#     data_collector_0,
+#     time_collector,
+#     nb_sites,
+#     f"results/plot_L{elem_0}{elem_0}_comp_{elem_0}{comp_0}_{elem_1}{comp_1}.png",
+# )
 
+# L_11 = calculate_L_ij_v2(
+#     elem_1,
+#     elem_1,
+#     data_collector_1,
+#     data_collector_1,
+#     time_collector,
+#     nb_sites,
+#     f"results/plot_L{elem_1}{elem_1}_comp_{elem_0}{comp_0}_{elem_1}{comp_1}.png",
+# )
 
-L_11 = calculate_L_ij(
-    elem_1,
-    elem_1,
-    data_collector_1,
-    data_collector_1,
-    time_collector,
-    nb_sites,
-    f"results/plot_L{elem_1}{elem_1}_comp_{elem_0}{comp_0}_{elem_1}{comp_1}.png",
-)
-
-L_01 = calculate_L_ij(
+L_01 = calculate_L_ij_v2(
     elem_0,
     elem_1,
     data_collector_0,
@@ -173,10 +313,34 @@ L_01 = calculate_L_ij(
     f"results/plot_L{elem_0}{elem_1}_comp_{elem_0}{comp_0}_{elem_1}{comp_1}.png",
 )
 
-with open("results/all_results.dat", "a") as file:
-    file.write(
-        f"{elem_0} {elem_1} {elem_2} {comp_0} {comp_1} {comp_2} {L_00} {L_11} {L_01}\n"
-    )
+# with open("results/all_results.dat", "a") as file:
+#     file.write(
+#         f"{elem_0} {elem_1} {elem_2} {comp_0} {comp_1} {comp_2} {L_00} {L_11} {L_01}\n"
+#     )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # def get_Ls_as_paper(

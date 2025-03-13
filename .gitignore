@@ -3,3 +3,7 @@
 
 #Ignore the vscode configuration
 /.vscode
+.DS_Store
+
+#Ignore raw results (files are too big and there is too many of them.)
+/raw_results
