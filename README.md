@@ -1,5 +1,7 @@
 # Vacancy Mediated Substitutional Diffusion in Random Alloys
 
+(private reopo version)
+
 This library provides the diffusion of a single vacancy in an alloy using the kinetic Monte Carlo algorithm. 
 
 Written by Zoë Evans (zoe.evans@epfl.ch) in a Spring 2024 Semester Project at the MADES EPFL lab.
