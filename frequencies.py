@@ -84,7 +84,7 @@ def hop_frequency_calculator(
     return freq_neighbours, sum_frequencies
 
 
-# NOTE slow version (to be avoided)
+# NOTE slow version (to be avoided) (generates random number)
 def select_event(freq_neighbours: np.array) -> int:
     """Function to select an event from the frequency vector,
        returns the index of the neighbour with which the vacancy will switch
@@ -98,7 +98,7 @@ def select_event(freq_neighbours: np.array) -> int:
     return np.min(np.where(freq_neighbours > rho))
 
 
-# NOTE faster version (preferably use this)
+# NOTE faster version (preferably use this) (takes random number as input)
 def select_event_alternative(
     random_array: np.array, current_step: int, freq_neighbours: np.array
 ) -> int:

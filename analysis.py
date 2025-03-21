@@ -11,7 +11,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
 
-
 def calculate_L_ij(
     atom_type_i: str,
     atom_type_j: str,
@@ -19,7 +18,7 @@ def calculate_L_ij(
     data_j: np.array,
     time_collector: np.array,
     nb_sites: int,
-    filename: str,
+    filename: str = None,
 ) -> float:
     nb_site_i = np.shape(data_i)[1]
     nb_site_j = np.shape(data_j)[1]
@@ -81,7 +80,9 @@ def calculate_L_ij(
         atom_type_j,
     )
 
-    #L_ij_plot(time_collector, linevalues, mds, atom_type_i, atom_type_j, filename)
+    if filename is not None :
+        L_ij_plot(time_collector, linevalues, mds, atom_type_i, atom_type_j, filename)
+    
     return slope / 6
 
 def calculate_L_ij_v2(
@@ -99,18 +100,6 @@ def calculate_L_ij_v2(
     displs_array_j = np.full((np.shape(data_j)[2], np.shape(data_j)[1],3), None)
     data_j = data_j * 1e-8  # convert to cm
     data_i = data_i * 1e-8  # convert to cm
-
-    for i in range(data_i.shape[1]):
-        plt.plot(data_i[0,i,:],data_i[1,i,:],)
-        plt.text(np.min(data_i[0,i,:]),np.min(data_i[1,i,:]),str(i))
-    plt.title("data_i")
-    plt.show()
-
-    for i in range(data_j.shape[1]):
-        plt.plot(data_j[0,i,:],data_j[1,i,:],)
-        plt.text(np.min(data_j[0,i,:]),np.min(data_j[1,i,:]),str(i))
-    plt.title("data_j")
-    plt.show()
 
     for site in range(data_i.shape[1]):
         for time_step in range(data_i.shape[2]):  
@@ -139,22 +128,22 @@ def calculate_L_ij_v2(
     plt.ylabel("Delta R^i_zeta (t)^2 [A^2]")
     plt.show()
 
-    #for site_zeta in range(data_i.shape[1]):
-    #     for site_xi in range(data_j.shape[1]):
-    #         if site_zeta != site_xi:
-    #             plt.plot(np.einsum('ij,ij->i', displs_array_i[:,site_zeta,:], displs_array_j[:,site_xi,:]),linewidth=1,alpha=0.1)
-    # plt.savefig("cross_term_ij.png",dpi=600)
+    for site_zeta in range(data_i.shape[1]):
+        for site_xi in range(data_j.shape[1]):
+            if site_zeta != site_xi:
+                plt.plot(np.einsum('ij,ij->i', displs_array_i[:,site_zeta,:], displs_array_j[:,site_xi,:]),linewidth=1,alpha=0.1)
+    plt.savefig("cross_term_ij.png",dpi=600)
 
-    # crosses = []
-    # for site_zeta in range(data_i.shape[1]):
-    #     for site_xi in range(data_j.shape[1]):
-    #         if site_zeta != site_xi:
-    #             crosses.append(np.einsum('ij,ij->i', displs_array_i[:,site_zeta,:], displs_array_j[:,site_xi,:]))
+    crosses = []
+    for site_zeta in range(data_i.shape[1]):
+        for site_xi in range(data_j.shape[1]):
+            if site_zeta != site_xi:
+                crosses.append(np.einsum('ij,ij->i', displs_array_i[:,site_zeta,:], displs_array_j[:,site_xi,:]))
 
-    # crosses = np.array(crosses)
-    # plt.plot(np.sum(crosses,axis=0))
-    # plt.plot(np.sum(sames_i,axis=0))
-    # plt.show()
+    crosses = np.array(crosses)
+    plt.plot(np.sum(crosses,axis=0))
+    plt.plot(np.sum(sames_i,axis=0))
+    plt.show()
 
 
     mds = np.array(mds, dtype=float)
@@ -213,16 +202,21 @@ def L_ij_plot(
     plt.show()
 
 
+#all_data = global_functions.read_full_from_json("raw_results/2025-03-13T15-48-41-results-Input_binary.json")
 all_data = global_functions.read_full_from_json("results.json")
+
+print(np.unique(all_data["atom_pos"].occupancy_vector,return_counts = True))
+
 all_data_collector = all_data["data_collector"]
 time_collector = all_data["time_collector"]
 
+
 occupancy_vector = all_data["atom_pos"].occupancy_vector
+start_indices = all_data["atom_pos"].index_array
 
-indices_0 = np.where(occupancy_vector == 0.0)[0]
-indices_1 = np.where(occupancy_vector == 1.0)[0]
-indices_2 = np.where(occupancy_vector == 2.0)[0]
-
+indices_0 = start_indices[np.where(occupancy_vector == 0.0)[0]]
+indices_1 = start_indices[np.where(occupancy_vector == 1.0)[0]]
+indices_2 = start_indices[np.where(occupancy_vector == 2.0)[0]]
 
 nb_sites = np.shape(all_data_collector)[1]
 print(np.shape(indices_0))
@@ -242,7 +236,13 @@ print(data_collector_2[:,0,1])
 for i in range(data_collector_0.shape[1]):
     plt.plot(data_collector_0[0,i,:],data_collector_0[1,i,:],)
     plt.text(np.min(data_collector_0[0,i,:]),np.min(data_collector_0[1,i,:]),str(i))
-plt.title("data_i")
+plt.title("data_0")
+plt.show()
+
+for i in range(data_collector_1.shape[1]):
+    plt.plot(data_collector_1[0,i,:],data_collector_1[1,i,:],)
+    plt.text(np.min(data_collector_1[0,i,:]),np.min(data_collector_1[1,i,:]),str(i))
+plt.title("data_1")
 plt.show()
 
 displs_array_2 = np.full((np.shape(data_collector_2)[2], np.shape(data_collector_2)[1],3), None)
@@ -251,13 +251,53 @@ for time_step in range(data_collector_2.shape[2]):
     displs_array_2[time_step, 0, 1] = data_collector_2[1, 0,time_step] - data_collector_2[1, 0, 0]
     displs_array_2[time_step, 0, 2] = data_collector_2[2, 0, time_step] - data_collector_2[2, 0, 0]
 
+from matplotlib.collections import LineCollection
+def multicolored_line(x,y,z,cmap="turbo") :
+    points = np.array([x, y]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+    norm = plt.Normalize(z.min(), z.max())
+    lc = LineCollection(segments, cmap=cmap, norm=norm)
+    lc.set_array(z)
+    return lc 
+
+print(time_collector.shape)
+print(time_collector[0].shape)
+
+lc = multicolored_line(data_collector_2[0,0,:],data_collector_2[1,0,:],time_collector[0],cmap="turbo")
+fig, ax = plt.subplots()
+ax.plot(data_collector_2[0,0,:],data_collector_2[1,0,:])
+line = ax.add_collection(lc)
+ax.set_title("vacancy")
+fig.show()
+plt.show()
+plt.close()
+
 sd = np.sum(displs_array_2 ** 2, axis=2)
 plt.plot(sd)
-plt.ylabel("vacancy msd")
+plt.ylabel("vacancy sd")
+plt.show()
+
+# ----
+for i in range(data_collector_0.shape[1]):
+    plt.plot(data_collector_0[0,i,:],data_collector_0[1,i,:],color="C0")
+
+for i in range(data_collector_1.shape[1]):
+    plt.plot(data_collector_1[0,i,:],data_collector_1[1,i,:],color="C1")
+
+plt.plot(data_collector_2[0,0,:],data_collector_2[1,0,:],color="C2")
+
+plt.title(f"0 : {data_collector_0.shape[1]}, 1 : {data_collector_1.shape[1]}, 2 : {data_collector_2.shape[1]}")
+
+plt.savefig("all_mvmnts.png",dpi=600)
+plt.show()
+#---
+
+sd = np.sum(displs_array_2 ** 2, axis=2)
+plt.plot(sd)
+plt.ylabel("vacancy sd")
 plt.show()
 
 #plot how the vacancy moves
-plt.scatter(data_collector_2[0,0,:] * 1e-8,data_collector_2[1,0,:] * 1e-8,c=range(data_collector_2.shape[2]),cmap="turbo",s=1)
 
 # plt.scatter(data_collector_0[0,50,:] * 1e-8,data_collector_0[1,50,:] * 1e-8,c=range(data_collector_0.shape[2]),cmap="turbo",marker="x")
 
@@ -283,15 +323,15 @@ for key, value in all_data["atom_key"].items():
         comp_2 = all_data["composition_dict"][key]
 
 
-# L_00 = calculate_L_ij_v2(
-#     elem_0,
-#     elem_0,
-#     data_collector_0,
-#     data_collector_0,
-#     time_collector,
-#     nb_sites,
-#     f"results/plot_L{elem_0}{elem_0}_comp_{elem_0}{comp_0}_{elem_1}{comp_1}.png",
-# )
+L_00 = calculate_L_ij_v2(
+    elem_0,
+    elem_0,
+    data_collector_0,
+    data_collector_0,
+    time_collector,
+    nb_sites,
+    f"results/plot_L{elem_0}{elem_0}_comp_{elem_0}{comp_0}_{elem_1}{comp_1}.png",
+)
 
 # L_11 = calculate_L_ij_v2(
 #     elem_1,

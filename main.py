@@ -49,7 +49,7 @@ print(input_data)
 
 # Run initialization
 start_time = time.time()
-poscar_path = os.path.join(raw_results_directory, dt + "-POSCAR-" + args.input_file.rstrip(".json"))
+poscar_path = os.path.join(raw_results_directory, dt + "-POSCAR-" + args.input_file.split("/")[-1].rstrip(".json"))
 init_struct = global_functions.initialization(*input_data,poscar_path=poscar_path)
 end_time = time.time()
 print("Total initialization Time", end_time - start_time)
@@ -59,7 +59,7 @@ print("Total initialization Time", end_time - start_time)
 # First save for analysis.py
 global_functions.write_full_to_json(init_struct, "Initialized_struct.json")
 # Second save for archiving
-init_struct_filename = dt + "-initialized_struct-" + args.input_file
+init_struct_filename = dt + "-initialized_struct-" + args.input_file.split("/")[-1]
 global_functions.write_full_to_json(init_struct, os.path.join(raw_results_directory, init_struct_filename))
 
 print("Initialized structure written to file")
@@ -74,7 +74,7 @@ print("Driver function time", end_time - start_time)
 # First save for analysis.py
 global_functions.write_full_to_json(results, "results.json")
 # Second save for archiving
-results_filename = dt + "-results-" + args.input_file
+results_filename = dt + "-results-" + args.input_file.split("/")[-1]
 global_functions.write_full_to_json(results, os.path.join(raw_results_directory, results_filename))
 
 total_time_end = time.time()
