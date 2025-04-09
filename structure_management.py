@@ -110,7 +110,6 @@ def create_alloy(structure: pmg.Structure, composition: dict) -> pmg.Structure:
     for site in range(structure.num_sites):
         structure[int(random_order_sites[site])] = elements_repeated[site]
     for elem in elem_array:
-        print("elem test", elem)
         print(
             "Composition of the structure created:",
             elem,

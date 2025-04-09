@@ -9,6 +9,8 @@ import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import time
+
 
 
 ### Modify the values here
@@ -65,21 +67,24 @@ for al_composition in [0.5] : #np.arange(lowest_comp, highest_comp, comp_step) :
     filename_list.append(input_filename)
     output_dir_list.append(output_dir_name)
 
-print(filename_list)
 
 for i,input_filename in enumerate(filename_list):
     output_dir = output_dir_list[i]
     for i in range(5000) :
         try:
+            print(i) 
+
             command = ["python3", "main.py", "-binary", input_filename]
 
             subprocess.run(command)
             print(f"Running main.py on {input_filename}")
             
-
+            tic = time.time()
             output_filename = os.path.join(output_dir, f"{i}.h5")
             subprocess.run(["python3", "analysis_v2.py", tmp_raw_kmc_output_file, output_filename])
             print(f"running analysis.py on {input_filename}")
+            toc = time.time()
+            print(f"Time taken for analysis: {toc - tic} seconds")
 
         except Exception as e:
             print(f"Error running  {input_filename}: {e}")

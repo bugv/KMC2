@@ -52,7 +52,7 @@ if args.output is not None:
     os.makedirs(raw_results_directory, exist_ok=True)
 
 
-print(input_data)
+#print(input_data)
 
 
 # Run initialization
@@ -62,6 +62,7 @@ if args.output is None:
     poscar_path = "tmp/POSCAR"
 else :
     poscar_path = os.path.join(raw_results_directory, dt + "-POSCAR-" + args.input_file.split("/")[-1].rstrip(".json"))
+
 init_struct = global_functions.initialization(*input_data,poscar_path=poscar_path)
 end_time = time.time()
 print("Total initialization Time", end_time - start_time)
