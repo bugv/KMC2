@@ -7,3 +7,5 @@
 
 #Ignore raw results (files are too big and there is too many of them.)
 /raw_results
+/tmp
+/results_first_processing
