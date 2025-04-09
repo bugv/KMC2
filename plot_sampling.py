@@ -12,29 +12,17 @@ def single_calc(all_data_collector, indices_0, indices_1, indices_2):
     data_collector_1 = all_data_collector[:, indices_1, :]
     data_collector_2 = all_data_collector[:, indices_2, :]
 
-    #vacancy
-    displs_array_2 = np.full((np.shape(data_collector_2)[2], np.shape(data_collector_2)[1],3), None)
-    for time_step in range(data_collector_2.shape[2]):
-        displs_array_2[time_step, 0, 0] = data_collector_2[0, 0, time_step] - data_collector_2[0, 0, 0]
-        displs_array_2[time_step, 0, 1] = data_collector_2[1, 0,time_step] - data_collector_2[1, 0, 0]
-        displs_array_2[time_step, 0, 2] = data_collector_2[2, 0, time_step] - data_collector_2[2, 0, 0]
+    # Vectorized computation for vacancy
+    displs_array_2 = data_collector_2[:, :, :] - data_collector_2[:, :, [0]]
 
-    # Al & Fe
-    displs_array_0 = np.full((np.shape(data_collector_0)[2], np.shape(data_collector_0)[1],3), None)
-    displs_array_1 = np.full((np.shape(data_collector_1)[2], np.shape(data_collector_1)[1],3), None)
+    # Vectorized computation for Al & Fe
+    displs_array_0 = data_collector_0[:, :, :] - data_collector_0[:, :, [0]]
+    displs_array_1 = data_collector_1[:, :, :] - data_collector_1[:, :, [0]]
 
-    for site in range(data_collector_0.shape[1]):
-        for time_step in range(data_collector_0.shape[2]):  
-            displs_array_0[time_step, site, 0] = data_collector_0[0, site, time_step] - data_collector_0[0, site, 0]
-            displs_array_0[time_step, site, 1] = data_collector_0[1, site, time_step] - data_collector_0[1, site, 0]
-            displs_array_0[time_step, site, 2] = data_collector_0[2, site, time_step] - data_collector_0[2, site, 0]
-
-    for site in range(data_collector_1.shape[1]):
-        for time_step in range(data_collector_1.shape[2]):
-            displs_array_1[time_step, site, 0] = data_collector_1[0, site, time_step] - data_collector_1[0, site, 0]
-            displs_array_1[time_step, site, 1] = data_collector_1[1, site, time_step] - data_collector_1[1, site, 0]
-            displs_array_1[time_step, site, 2] = data_collector_1[2, site, time_step] - data_collector_1[2, site, 0]
-
+    # Reshape arrays in time-site-xyz order
+    displs_array_2 = np.transpose(displs_array_2, (2, 1, 0))
+    displs_array_0 = np.transpose(displs_array_0, (2,1,0))
+    displs_array_1 = np.transpose(displs_array_1, (2,1,0))
 
 
     # sum over coordinates
@@ -65,7 +53,7 @@ crosses_11 = []
 theprod_01 = []
 r2s_vacancy = []
 
-
+#i = 0
 for filename in os.listdir("raw_results"):
     if filename.endswith(".json") and "results" in filename and "Al_0.50_Fe_0.50_" in filename:
         print(filename)
@@ -92,6 +80,10 @@ for filename in os.listdir("raw_results"):
 
         except Exception as e:
             print(f"Error in {filename}: {e}")
+
+        # i += 1
+        # if i > 20 :
+        #     break
 
 
 r2s_00 = np.array(r2s_00,dtype=float)
@@ -122,6 +114,9 @@ L_11 = x_V * x_B * rho * a**2 * Gamma * (1 - x_A / (1-x_V) *  (1-f))
 L_01 = x_V * x_A * x_B / (1- x_V) * rho * a**2 * Gamma * (1-f)
 predict_01 = L_01 * np.arange(1000) * 6 * 500 * 2.28023874e-04 / 1000
 predict_11 = L_11 * np.arange(1000) * 6 * 500 * 2.28023874e-04 / 1000
+
+# save 
+np.savetxt("sampling.txt",np.array([total_00.mean(axis=0),total_00.std(axis=0),r2s_00.mean(axis=0),r2s_00.std(axis=0),crosses_00.mean(axis=0), crosses_00.std(axis=0),total_11.mean(axis=0),total_11.std(axis=0),r2s_11.mean(axis=0),r2s_11.std(axis=0),crosses_11.mean(axis=0), crosses_11.std(axis=0),theprod_01.mean(axis=0),theprod_01.std(axis=0) ]))
 
 # time 
 plt.close()
@@ -156,6 +151,8 @@ plt.ylabel("AA^2")
 plt.xlabel("propto time")
 plt.grid()
 plt.show()
+
+
 
 # L11
 plt.close()
