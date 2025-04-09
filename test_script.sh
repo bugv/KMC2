@@ -4,6 +4,7 @@
 #SBATCH --cpus-per-task 1
 #SBATCH --time 00:30:00
 #SBATCH --mem=400M
+#SBATCH --output=logs/slurm-%A_%a.out
 
 #SBATCH --array=0-5000%500
 
