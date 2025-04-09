@@ -7,6 +7,9 @@ import pandas as pd
 import h5py
 import argparse
 import global_functions
+import time
+
+tic_overall = time.time()
 
 parser = argparse.ArgumentParser(
     description="Process KMC output json file into output h5 file"
@@ -18,6 +21,7 @@ input_file = parser.parse_args().input_file
 output_file = parser.parse_args().output
 if output_file is None:
     output_file = os.path.join("tmp", "results_first_processing.h5")
+
 
 def single_calc(all_data_collector, indices_0, indices_1, indices_2):
     data_collector_0 = all_data_collector[:, indices_0, :]
@@ -75,11 +79,8 @@ indices_2 = start_indices[np.where(occupancy_vector == 2.0)[0]]
 
 res = single_calc(all_data_collector, indices_0, indices_1, indices_2)
 
-with open(input_file, "r") as i:
-    input_data = json.load(i)
 
 group_keys = ['frequency_vector', 'total_nb_steps', 'sampling_frequency', 'time','composition_dict', 'atom_key']
-group = {key : all_data[key] for key in group_keys}
 
 with h5py.File(output_file,"w") as h5file:
     for key, value in res.items():
@@ -97,6 +98,6 @@ with h5py.File(output_file,"w") as h5file:
         else:
             group_input.create_dataset(key, data=value)
 
-    
-
+toc_overall = time.time()
+print("Time for analysis: ", toc_overall - tic_overall)
 

@@ -80,12 +80,10 @@ for i,input_filename in enumerate(filename_list):
             subprocess.run(command)
             print(f"Running main.py on {input_filename}")
             
-            tic = time.time()
             output_filename = os.path.join(output_dir, f"{i}.h5")
             subprocess.run(["python3", "analysis_v2.py", tmp_raw_kmc_output_file, output_filename])
-            print(f"running analysis.py on {input_filename}")
-            toc = time.time()
-            print(f"Time taken for analysis: {toc - tic} seconds")
+            print(f"running analysis_v2.py on {input_filename}")
+
 
         except Exception as e:
             print(f"Error running  {input_filename}: {e}")
