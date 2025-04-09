@@ -258,7 +258,8 @@ def initialization(
         sampling_frequency, total_nb_steps
     )
 
-    write_struct_to_poscar(supercell,poscar_path)
+    if poscar_path is not None:
+        write_struct_to_poscar(supercell,poscar_path)
     print("Completed Initialization")
 
     return {

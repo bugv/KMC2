@@ -9,21 +9,11 @@ import argparse
 import global_functions
 import time
 
-tic_overall = time.time()
+def single_calc(all_data_collector, occupancy_vector, start_indices):
+    indices_0 = start_indices[np.where(occupancy_vector == 0.0)[0]]
+    indices_1 = start_indices[np.where(occupancy_vector == 1.0)[0]]
+    indices_2 = start_indices[np.where(occupancy_vector == 2.0)[0]]
 
-parser = argparse.ArgumentParser(
-    description="Process KMC output json file into output h5 file"
-)
-parser.add_argument("input_file", type=str, help="input file (json)")
-parser.add_argument("output", type=str, default = None,nargs ="?", help="output file (h5)")
-
-input_file = parser.parse_args().input_file
-output_file = parser.parse_args().output
-if output_file is None:
-    output_file = os.path.join("tmp", "results_first_processing.h5")
-
-
-def single_calc(all_data_collector, indices_0, indices_1, indices_2):
     data_collector_0 = all_data_collector[:, indices_0, :]
     data_collector_1 = all_data_collector[:, indices_1, :]
     data_collector_2 = all_data_collector[:, indices_2, :]
@@ -65,39 +55,3 @@ def single_calc(all_data_collector, indices_0, indices_1, indices_2):
 
 
     return {"theprod_00": theprod_00, "theprod_01": theprod_01, "theprod_11": theprod_11, "r2s_00": r2s_00, "r2s_11": r2s_11, "r2s_vacancy": r2s_vacancy, "cross_00": cross_00, "cross_11": cross_11}
-
-all_data = global_functions.read_full_from_json(input_file)
-all_data_collector = all_data["data_collector"]
-time_collector = all_data["time_collector"]
-
-occupancy_vector = all_data["atom_pos"].occupancy_vector
-start_indices = all_data["atom_pos"].index_array
-
-indices_0 = start_indices[np.where(occupancy_vector == 0.0)[0]]
-indices_1 = start_indices[np.where(occupancy_vector == 1.0)[0]]
-indices_2 = start_indices[np.where(occupancy_vector == 2.0)[0]]
-
-res = single_calc(all_data_collector, indices_0, indices_1, indices_2)
-
-
-group_keys = ['frequency_vector', 'total_nb_steps', 'sampling_frequency', 'time','composition_dict', 'atom_key']
-
-with h5py.File(output_file,"w") as h5file:
-    for key, value in res.items():
-        h5file.create_dataset(key, data=value)
-
-    h5file.create_dataset("time_collector", data=all_data["time_collector"][0]) #[0] because for some reason time_collector is a np.array([[data]]) situation
-    
-    group_input = h5file.create_group("input")
-    for key in group_keys:
-        value = all_data[key]
-        if isinstance(value, dict):
-            subgroup = group_input.create_group(key)
-            for subkey, subvalue in value.items():
-                subgroup.create_dataset(subkey, data=subvalue)
-        else:
-            group_input.create_dataset(key, data=value)
-
-toc_overall = time.time()
-print("Time for analysis: ", toc_overall - tic_overall)
-

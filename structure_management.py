@@ -45,7 +45,7 @@ def occupancy_vector_builder(structure: pmg.Structure, atom_key: dict) -> np.arr
     :return: vector where values correspond to atom at the site with that index
     :rtype: np.array
     """
-    occupancy_vector = np.empty(structure.num_sites)
+    occupancy_vector = np.empty(structure.num_sites, dtype=np.int8)
     for i in range(structure.num_sites):
         occupancy_vector[i] = atom_key[
             str(structure[i].species.elements[0])
@@ -332,9 +332,11 @@ def get_displacement_tensor(
             get_max_nb_neighbours(supercell, radius),
             primitive.num_sites,
         ),
-        None,
+        np.nan,
+        dtype=np.float64,
     )
-    index_list = np.array([])
+
+    index_list = np.array([],dtype=np.int8)
     for i in range(primitive.num_sites):
 
         count = np.count_nonzero(neighbour_list[0] == i)
@@ -348,7 +350,7 @@ def get_displacement_tensor(
         displ = neighbour_coords - primitive[center].coords
         displ_vect_tensor[:, int(index_list[count_center]), center] = displ
     displ_vect_tensor = np.transpose(displ_vect_tensor, (1, 0, 2))
-    sorted_displ_tensor = np.empty_like(displ_vect_tensor)
+    sorted_displ_tensor = np.empty_like(displ_vect_tensor,dtype=np.float64)
     for i in range(np.shape(sorted_displ_tensor)[2]):
         layer = displ_vect_tensor[:, :, i]
         sorter = np.lexsort((layer[:, 2], layer[:, 1], layer[:, 0]))
@@ -370,7 +372,7 @@ def get_max_nb_neighbours(structure: pmg.Structure, radius: int) -> int:
     neighbour_list = structure.get_neighbor_list(radius)
     centers_list = neighbour_list[0]
     nb_sites_struct = structure.num_sites
-    counts = np.full(nb_sites_struct, None)
+    counts = np.full(nb_sites_struct, 0, dtype=np.int8) # Changed None to 0 in default value to specify int8. HOPEFULLY THIS DOES NOT CAUSE ISSUES. THIS IS A POSSIBLE BREAKING POINT
     for i in range(nb_sites_struct):
         counts[i] = np.count_nonzero(centers_list == i)
     max_neighbours = np.max(counts)
@@ -393,11 +395,11 @@ def neighbour_finder(structure: pmg.Structure, radius: float) -> np.array:
     nearest_sites_list = neighbour_list[1]
 
     M = get_max_nb_neighbours(structure, radius)
-    neighbour_array = np.full((M, N), None)
+    neighbour_array = np.full((M, N), np.nan, dtype=np.float64) #should be int, but having nan is better here
     for index, atom in enumerate(centers_list):
         added_to_list = False
         for m in range(M):
-            if neighbour_array[m, atom] == None and not added_to_list:
+            if np.isnan(neighbour_array[m, atom]) and not added_to_list:
                 neighbour_array[m, atom] = nearest_sites_list[index]
                 added_to_list = True
     return neighbour_array
@@ -430,7 +432,7 @@ def data_collector_builder(
     :rtype: np.array
     """
     data_collector = np.full(
-        (3, supercell.num_sites, int(total_number_step / sampling_freq)), None
+        (3, supercell.num_sites, int(total_number_step / sampling_freq)), np.nan, dtype=np.float64
     )
     data_collector[:, :, 0] = supercell.cart_coords.transpose()
     return data_collector
@@ -446,7 +448,7 @@ def time_collector_builder(sampling_freq: float, total_number_step: int) -> np.a
     :return: array to store the times at which the structure is sampled
     :rtype: np.array
     """
-    return np.full((1, int(total_number_step / sampling_freq)), 0.0)
+    return np.full((1, int(total_number_step / sampling_freq)), 0.0, dtype=np.float64)
 
 
 def index_vector_builder(structure: pmg.Structure) -> np.array:

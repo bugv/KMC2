@@ -25,7 +25,7 @@ def frquency_calculator(atom_key: dict) -> np.array:
     :return: array where the value corresponds to the frequency of a hop for the atom with that index as identification
     :rtype: np.array
     """
-    frequency_vector = np.full(len(atom_key), 1 / len(atom_key))
+    frequency_vector = np.full(len(atom_key), 1 / len(atom_key),dtype=np.float64)  
     return frequency_vector
 
 
@@ -39,7 +39,7 @@ def standardize_frequencies(user_frequencies: dict, atom_key: dict) -> np.array:
     :return: 1D array with the frequency of a given atom at the index that corresponds to that atom in the array
     :rtype: np.array
     """
-    frequency_vector = np.full(len(atom_key), None)
+    frequency_vector = np.full(len(atom_key), np.nan, dtype=np.float64)
     print("empty frequency_vector", frequency_vector)
     print(atom_key)
     for key in atom_key:
