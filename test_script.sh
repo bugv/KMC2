@@ -5,7 +5,7 @@
 #SBATCH --time 00:30:00
 #SBATCH --mem=400M
 
-#SBATCH --array=0-100
+#SBATCH --array=0-5000%500
 
 N=${SLURM_ARRAY_TASK_ID}
 
