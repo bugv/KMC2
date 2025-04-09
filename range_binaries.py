@@ -72,6 +72,7 @@ for i,input_filename in enumerate(filename_list):
     output_dir = output_dir_list[i]
     for i in range(5000) :
         try:
+            print("---")
             print(i) 
 
             command = ["python3", "main.py", "-binary", input_filename]
