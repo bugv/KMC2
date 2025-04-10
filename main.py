@@ -90,19 +90,27 @@ if raw_results_directory is not None:
     global_functions.write_full_to_json(results_KMC, os.path.join(raw_results_directory, results_filename))
 
 # analysis
+
+tic = time.time()
+
 data_collector = results_KMC["data_collector"]
 time_collector = results_KMC["time_collector"]
 
 occupancy_vector = results_KMC["atom_pos"].occupancy_vector
 start_indices = results_KMC["atom_pos"].index_array
 
-results_analysis = analysis_v2.single_calc(data_collector, occupancy_vector, start_indices)
+results_analysis = analysis_v2.single_calc(data_collector, occupancy_vector, start_indices, results_KMC["atom_key"])
+
+toc = time.time()
+print("Analysis time", toc - tic)
 
 group_keys = ['frequency_vector', 'total_nb_steps', 'sampling_frequency', 'time','composition_dict', 'atom_key']
 
 with h5py.File(output_analysis,"w") as h5file:
     for key, value in results_analysis.items():
-        h5file.create_dataset(key, data=value)
+        data_group = h5file.create_group(key)
+        for subkey, subvalue in value.items():
+            data_group.create_dataset(subkey, data=subvalue)
 
     h5file.create_dataset("time_collector", data=results_KMC["time_collector"][0]) #[0] because for some reason time_collector is a np.array([[data]]) situation
 
