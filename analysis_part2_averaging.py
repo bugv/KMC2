@@ -48,13 +48,19 @@ for root,subdir,files in os.walk("results_first_processing"):
 
                         i += 1
 
+            data_group_r2s_mean = outfile.create_group("r2s_mean")
+            data_group_r2s_std = outfile.create_group("r2s_std")
+            data_group_theproduct_mean = outfile.create_group("theproduct_mean")
+            data_group_theproduct_std = outfile.create_group("theproduct_std")
 
-            for key in ["r2s", "theproduct"] :
-                data_group_mean = outfile.create_group(key + "_mean")
-                data_group_std = outfile.create_group(key + "_std")
-                for subkey, subvalue in value.items():
-                    data_group_mean.create_dataset(subkey, data=subvalue.mean(axis=1))
-                    data_group_std.create_dataset(subkey, data=subvalue.std(axis=1))
+                
+            for key, value in r2s.items():
+                data_group_r2s_mean.create_dataset(key, data=subvalue.mean(axis=1))
+                data_group_r2s_std.create_dataset(key, data=subvalue.std(axis=1))
+            
+            for key, value in theprod.items():
+                data_group_theproduct_mean.create_dataset(key, data=subvalue.mean(axis=1))
+                data_group_theproduct_std.create_dataset(key, data=subvalue.std(axis=1))
 
             outfile.create_dataset("time_collector", data=time_collector.mean(axis=1))
 
