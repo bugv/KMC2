@@ -57,7 +57,8 @@ for root,subdir,files in os.walk("results_first_processing"):
                             r2s_AA[:, i] = f["r2s_11"][:]
                             crosses_AA[:, i] = f["cross_11"][:]
                         else : 
-                            print(f"Error: atom_key not recognized in {input_filename}")
+                            print(f"Error: atom_key not recognized in {input_filename}. ")
+                            print(f'Fe : {f["input"]["atom_key"]["Fe"][()]}, Al : {f["input"]["atom_key"]["Al"][()]}')
                         
                         time_collector[:, i] = f["time_collector"][:]
 
