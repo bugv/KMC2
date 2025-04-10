@@ -55,12 +55,12 @@ for root,subdir,files in os.walk("results_first_processing"):
 
                 
             for key, value in r2s.items():
-                data_group_r2s_mean.create_dataset(key, data=subvalue.mean(axis=1))
-                data_group_r2s_std.create_dataset(key, data=subvalue.std(axis=1))
+                data_group_r2s_mean.create_dataset(key, data=value.mean(axis=1))
+                data_group_r2s_std.create_dataset(key, data=value.std(axis=1))
             
             for key, value in theprod.items():
-                data_group_theproduct_mean.create_dataset(key, data=subvalue.mean(axis=1))
-                data_group_theproduct_std.create_dataset(key, data=subvalue.std(axis=1))
+                data_group_theproduct_mean.create_dataset(key, data=value.mean(axis=1))
+                data_group_theproduct_std.create_dataset(key, data=value.std(axis=1))
 
             outfile.create_dataset("time_collector", data=time_collector.mean(axis=1))
 
