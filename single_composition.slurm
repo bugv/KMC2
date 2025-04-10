@@ -6,7 +6,7 @@
 #SBATCH --mem=400M
 #SBATCH --output=logs/slurm-%A_%a.out
 
-#SBATCH --array=0-5000%500
+#SBATCH --array=0-5000%1000
 
 input_file=$1  # passed when submitting
 input_basename=$(basename "$input_file")  # strip path
