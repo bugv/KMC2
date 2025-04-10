@@ -10,7 +10,6 @@ species = ["Al","Fe","X0+"]
 for root,subdir,files in os.walk("results_first_processing"):
     if len(files) > 100 :
         print("Processing", root)
-        print("hi")
         os.makedirs(os.path.join("results_second_processing",*root.split("/")[1:-1]), exist_ok=True)
         output_filename = os.path.join("results_second_processing",*root.split("/")[1:-1], root.split("/")[-1] + ".h5")
 
@@ -51,8 +50,8 @@ for root,subdir,files in os.walk("results_first_processing"):
 
 
             for key in ["r2s", "theproduct"] :
-                data_group_mean = h5file.create_group(key + "_mean")
-                data_group_std = h5file.create_group(key + "_std")
+                data_group_mean = outfile.create_group(key + "_mean")
+                data_group_std = outfile.create_group(key + "_std")
                 for subkey, subvalue in value.items():
                     data_group_mean.create_dataset(subkey, data=subvalue.mean(axis=1))
                     data_group_std.create_dataset(subkey, data=subvalue.std(axis=1))
