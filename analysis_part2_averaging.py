@@ -8,6 +8,7 @@ os.makedirs("results_second_processing", exist_ok=True)
 
 for root,subdir,files in os.walk("results_first_processing"):
     if len(files) > 100 :
+        print("Processing", root)
         os.makedirs(os.path.join("results_second_processing",*root.split("/")[1:-1]), exist_ok=True)
         output_filename = os.path.join("results_second_processing",*root.split("/")[1:-1], root.split("/")[-1] + ".h5")
 
@@ -22,6 +23,7 @@ for root,subdir,files in os.walk("results_first_processing"):
             theprod_11 = np.full((1000,n_runs),np.nan)
             r2s_11 = np.full((1000,n_runs),np.nan)
             crosses_11 = np.full((1000,n_runs),np.nan)
+            time_collector = np.full((1000,n_runs),np.nan)
 
             i = 0
             for file in files:
@@ -36,6 +38,7 @@ for root,subdir,files in os.walk("results_first_processing"):
                         theprod_11[:, i] = f["theprod_11"][:]
                         r2s_11[:, i] = f["r2s_11"][:]
                         crosses_11[:, i] = f["cross_11"][:]
+                        time_collector[:, i] = f["time_collector"][:]
 
                         if i == 0 :
                             f.copy("input", outfile)
@@ -51,6 +54,7 @@ for root,subdir,files in os.walk("results_first_processing"):
             outfile.create_dataset("theprod_11", data=theprod_11.mean(axis=1))
             outfile.create_dataset("r2s_11", data=r2s_11.mean(axis=1))
             outfile.create_dataset("crosses_11", data=crosses_11.mean(axis=1))
+            outfile.create_dataset("time_collector", data=time_collector.mean(axis=1))
 
             outfile.create_dataset("crosses_00_std", data=crosses_00.std(axis=1))
             outfile.create_dataset("theprod_01_std", data=theprod_01.std(axis=1))
@@ -60,5 +64,6 @@ for root,subdir,files in os.walk("results_first_processing"):
             outfile.create_dataset("theprod_11_std", data=theprod_11.std(axis=1))
             outfile.create_dataset("r2s_11_std", data=r2s_11.std(axis=1))
             outfile.create_dataset("crosses_11_std", data=crosses_11.std(axis=1))
+            outfile.create_dataset("time_collector_std", data=time_collector.std(axis=1))
 
             outfile.create_dataset("n_runs", data=n_runs)

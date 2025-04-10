@@ -17,7 +17,7 @@ data = {
 elem_i = "Al"
 elem_j = "Fe"
 
-lowest_comp = 0.0
+lowest_comp = 0.05
 highest_comp = 1.0
 comp_step = 0.05
 
