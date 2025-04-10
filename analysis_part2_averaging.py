@@ -9,6 +9,7 @@ os.makedirs("results_second_processing", exist_ok=True)
 for root,subdir,files in os.walk("results_first_processing"):
     if len(files) > 100 :
         print("Processing", root)
+        print("hi")
         os.makedirs(os.path.join("results_second_processing",*root.split("/")[1:-1]), exist_ok=True)
         output_filename = os.path.join("results_second_processing",*root.split("/")[1:-1], root.split("/")[-1] + ".h5")
 
@@ -55,6 +56,8 @@ for root,subdir,files in os.walk("results_first_processing"):
                             theprod_AA[:, i] = f["theprod_11"][:]
                             r2s_AA[:, i] = f["r2s_11"][:]
                             crosses_AA[:, i] = f["cross_11"][:]
+                        else : 
+                            print(f"Error: atom_key not recognized in {input_filename}")
                         
                         time_collector[:, i] = f["time_collector"][:]
 
