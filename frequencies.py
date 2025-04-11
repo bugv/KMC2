@@ -76,9 +76,16 @@ def hop_frequency_calculator(
     neighbours = np.array(
         [x for x in neighbours if x is not None]
     )  # loops over the array with the neighbours of the vacancy
-    freq_neighbours = np.full(len(neighbours), None)
-    for count, values in enumerate(neighbours):  # loops over the neighbours of the site
-        freq_neighbours[count] = frequency_vect[int(occupancy_vector[int(values)])]
+    
+    # freq_neighbours = np.full(len(neighbours), np.nan, dtype=np.float64)
+    # for count, values in enumerate(neighbours):  # loops over the neighbours of the site
+    #     freq_neighbours[count] = frequency_vect[int(occupancy_vector[int(values)])]
+
+    freq_neighbours = frequency_vect[occupancy_vector[neighbours].astype(int)] # vectorized version
+
+    # if not np.array_equal(freq_neighbours_alt, freq_neighbours) : 
+    #     print("freq neighbours are not equivalent")
+
     sum_frequencies = np.sum(freq_neighbours)
     freq_neighbours = (np.cumsum(freq_neighbours)) / sum_frequencies
     return freq_neighbours, sum_frequencies
