@@ -21,9 +21,9 @@ lowest_comp = 0.05
 highest_comp = 1.0
 comp_step = 0.05
 
-input_dir = "inputs/GA1_GB10_binary"
+input_dir = "inputs/GA1_GB100_binary"
 tmp_raw_kmc_output_file = "tmp/results.json"
-output_dir = "results_first_processing/GA1_GB10_binary"
+output_dir = "results_first_processing/GA1_GB100_binary"
 
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(input_dir, exist_ok=True)
@@ -34,7 +34,7 @@ output_dir_list = []
 for al_composition in np.arange(lowest_comp, highest_comp, comp_step) :
     fe_composition = 1.0 - al_composition
     data["composition"] = {"Al": al_composition, "Fe": fe_composition}
-    data["hop_frequencies"]["Fe"] = data["hop_frequencies"]["Al"] * 10
+    data["hop_frequencies"]["Fe"] = data["hop_frequencies"]["Al"] * 100
 
     input_filename = os.path.join(
         input_dir,
