@@ -12,7 +12,7 @@ parser.add_argument("head", type=str, help="where to start looking from")
 
 os.makedirs("results_second_processing", exist_ok=True)
 
-for root,subdir,files in os.walk("results_first_processing"):
+for root,subdir,files in os.walk(args.head):
     if len(files) > 100 :
         print("Processing", root)
         os.makedirs(os.path.join("results_second_processing",root.split("/")[-2]), exist_ok=True)
