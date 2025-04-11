@@ -2,7 +2,7 @@
 #SBATCH --nodes 1
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task 1
-#SBATCH --time 00:30:00
+#SBATCH --time 00:03:00
 #SBATCH --mem=400M
 #SBATCH --output=logs/slurm-%A_%a.out
 
@@ -13,7 +13,8 @@ input_basename=$(basename "$input_file")  # strip path
 input_name="${input_basename%.*}"          # strip extension
 
 # Make output directory if not existing
-mkdir -p results_first_processing/ideal_binary/${input_name}
+
+mkdir -p results_first_processing/GA1_GB10_binary/${input_name}
 
 # Run
-python main.py -binary "$input_file" "results_first_processing/ideal_binary/${input_name}/${SLURM_ARRAY_TASK_ID}.h5"
+python main.py -binary "$input_file" "results_first_processing/GA1_GB10_binary/${input_name}/${SLURM_ARRAY_TASK_ID}.h5"

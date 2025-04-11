@@ -212,6 +212,7 @@ def initialization(
     supercell, initial_vac_pos = structure_management.add_vacancy_random(supercell)
 
     atom_key = structure_management.atom_key_builder(supercell)
+    print(f"Atom key: {atom_key}")
 
     compositon_dict = structure_management.get_comp_dict(supercell, atom_key)
 
