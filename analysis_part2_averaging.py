@@ -2,18 +2,30 @@ import numpy as np
 import h5py 
 import os 
 import copy
+import argparse
+
+parser = argparse.ArgumentParser(
+    description="Averages of series of KMC runs, outputs of which (after processing) are given in a single directory."
+)
+parser.add_argument("head", type=str, help="where to start looking from")
+
 
 os.makedirs("results_second_processing", exist_ok=True)
-
-species = ["Al","Fe","X0+"]
 
 for root,subdir,files in os.walk("results_first_processing"):
     if len(files) > 100 :
         print("Processing", root)
-        os.makedirs(os.path.join("results_second_processing",*root.split("/")[1:-1]), exist_ok=True)
-        output_filename = os.path.join("results_second_processing",*root.split("/")[1:-1], root.split("/")[-1] + ".h5")
+        os.makedirs(os.path.join("results_second_processing",root.split("/")[-2]), exist_ok=True)
+        output_filename = os.path.join("results_second_processing",root.split("/")[-2], root.split("/")[-1] + ".h5")
 
         with h5py.File(output_filename,"w") as outfile :
+
+            with h5py.File(os.path.join(root,files[0]),"r") as f :
+                if file.endswith(".h5") : 
+                    species = f["input"]["atom_key"].keys()
+
+                else : 
+                    print("PLEASE SPECIFY SPECIES")
 
             n_runs = sum([file.endswith(".h5") for file in os.listdir(root)])
 
