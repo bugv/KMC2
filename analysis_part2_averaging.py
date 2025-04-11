@@ -22,7 +22,7 @@ for root,subdir,files in os.walk("results_first_processing"):
 
             if files[0].endswith(".h5") : 
                 with h5py.File(os.path.join(root,files[0]),"r") as f :
-                    species = f["input"]["atom_key"].keys()
+                    species = list(f["input"]["atom_key"].keys())
 
             else : 
                     print(f"{f} is not an h5 file. Composition needs to be manually specified")
