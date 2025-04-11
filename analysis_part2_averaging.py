@@ -21,11 +21,11 @@ for root,subdir,files in os.walk("results_first_processing"):
         with h5py.File(output_filename,"w") as outfile :
 
             with h5py.File(os.path.join(root,files[0]),"r") as f :
-                if file.endswith(".h5") : 
+                if f.endswith(".h5") : 
                     species = f["input"]["atom_key"].keys()
 
                 else : 
-                    print("PLEASE SPECIFY SPECIES")
+                    print(f"{f} is not an h5 file. Composition needs to be manually specified")
 
             n_runs = sum([file.endswith(".h5") for file in os.listdir(root)])
 
