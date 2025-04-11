@@ -17,7 +17,7 @@ input_name="${input_basename%.*}"          # strip extension
 mkdir -p results_first_processing/GA1_GB10_binary/${input_name}
 
 # Set output filename
-output_filename="results_first_processing/ideal_binary/${input_name}/${SLURM_ARRAY_TASK_ID}.h5"
+output_filename="results_first_processing/GA1_GB10_binary/${input_name}/${SLURM_ARRAY_TASK_ID}.h5"
 
 # Check if output file already exists
 if [ -f "$output_filename" ]; then
