@@ -9,7 +9,7 @@
 #SBATCH --array=0-5000%500
 
 input_file=$1  # passed when submitting
-input_basename=$(basename "$input_file")  # strip path
+input_basename=$(echo "$input_file" | awk -F'/' '{print $(NF-1)"/"$NF}')  # extract last two path components
 input_name="${input_basename%.*}"          # strip extension
 
 # Make output directory if not existing
