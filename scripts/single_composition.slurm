@@ -16,17 +16,16 @@ input_name="${input_basename%.*}"          # strip extension
 
 mkdir -p results_first_processing/${input_name}
 
-# Set output filename
-output_filename="results_first_processing/${input_name}/${SLURM_ARRAY_TASK_ID}.h5"
-
-# Check if output file already exists
-if [ -f "$output_filename" ]; then
-    echo "Output file $output_filename already exists. Skipping."
-    exit 0
-fi
-
 # Run 10 jobs sequentially
 for i in $(seq 0 9); do
     task_id=$((SLURM_ARRAY_TASK_ID * 10 + i))
-    python main.py -binary "$input_file" "results_first_processing/${input_name}/${task_id}.h5"
+
+    output_filename="results_first_processing/${input_name}/${task_id}.h5"
+    # Check if output file already exists
+    if [ -f "$output_filename" ]; then
+        echo "Output file $output_filename already exists. Skipping."
+        continue
+    fi
+
+    python main.py -binary "$input_file" "$output_filename"
 done
